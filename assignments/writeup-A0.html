@@ -49,8 +49,8 @@ beforehand wouldn't yield the correct answer as a part of the lambda expression.
 This error can occur again if comparing the integer division of a and b doesn't
 yield the same answer as a * the integer quotient. Problem 3: The .end() pointer
 will point to the address right after the last value in the vector. To get the
-last value in the vector, you need to grab the element in the address right
-before the end. Another scenario that will cause this type of bug is if the
+last value in the vector, you need to grab the element in the end of the data structure instead. 
+Another scenario that will cause this type of bug is if the
 iterative pointer is not pointing to a specific value in the actual data
 structure, which will cause the retrieved pointer value to be undefined. Problem
 4: The issue that was happening here was that we were comparing the boolean
