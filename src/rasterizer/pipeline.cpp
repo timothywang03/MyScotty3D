@@ -365,68 +365,28 @@ void Pipeline<p, P, flags>::rasterize_line(
 	Vec3 a = Vec3{va.fb_position.x, va.fb_position.y, va.fb_position.z};
 	Vec3 b = Vec3{vb.fb_position.x, vb.fb_position.y, vb.fb_position.z};
 
-	// endpoint checking for diamond rule
-	if (std::abs(a[0] - std::floor(a[0]) + 0.5) + std::abs(a[1] - std::floor(a[1]) + 0.5) < 0.5) {
-		a[0] = std::floor(a[0]) + 0.5;
-		a[1] = std::floor(a[1]) + 0.5;
-	}
+	// helper function to draw a fragment
+	auto drawLine = [&va, &emit_fragment] (float x, float y, float z) {
+		Fragment frag;
+		frag.fb_position.x = x;
+		frag.fb_position.y = y;
+		frag.fb_position.z = z;
+		frag.attributes = va.attributes;
+		frag.derivatives.fill(Vec2(0.0f, 0.0f));
+		emit_fragment(frag);
+	};
+
+	// helper function to determine if an x or y is in the diamond
+	auto inDiamond = [](float x, float y) {
+		return std::abs(x - std::floor(x) - 0.5f) + std::abs(y - std::floor(y) - 0.5f) < 0.5f;
+	};
 
 	float dx = std::abs(b[0] - a[0]);
 	float dy = std::abs(b[1] - a[1]);
 
-	//! TODO: FIX DIAMOND CHECK
-	// // endpoint diamond check
-	// if (std::abs(a[0] - (floor(a[0]) + 0.5f)) + std::abs(a[1] - (floor(a[1]) + 0.5f)) < 0.5f) {
-	// 	Fragment frag;
-	// 	frag.fb_position.x = floor(a[0]) + 0.5f;
-	// 	frag.fb_position.y = floor(a[1]) + 0.5f;
-	// 	frag.fb_position.z = a[2];
-	// 	frag.attributes = va.attributes;
-	// 	frag.derivatives.fill(Vec2(0.0f, 0.0f));
-	// 	emit_fragment(frag);
-	// }
-
-	// if (std::abs(b[0] - (floor(b[0]) + 0.5f)) + std::abs(b[1] - (floor(b[1]) + 0.5f)) < 0.5f) {
-	// 	Fragment frag;
-	// 	frag.fb_position.x = floor(b[0]) + 0.5f;
-	// 	frag.fb_position.y = floor(b[1]) + 0.5f;
-	// 	frag.fb_position.z = b[2];
-	// 	frag.attributes = va.attributes;
-	// 	frag.derivatives.fill(Vec2(0.0f, 0.0f));
-	// 	emit_fragment(frag);
-	// }
-
-	// case if line is vertical
-	if (dx == 0) {
-		for (int u = std::min(a[1], b[1]); u < std::max(a[1], b[1]); u++) {
-			Fragment frag;
-			frag.fb_position.x = floor(a[0]) + 0.5f;
-			frag.fb_position.y = floor(u) + 0.5f;
-			frag.fb_position.z = (u + 0.5 - a[1]) / (b[1] - a[1]) * (b[2] - a[2]) + a[2];
-			frag.attributes = va.attributes;
-			frag.derivatives.fill(Vec2(0.0f, 0.0f));
-			emit_fragment(frag);
-		}
-		return;
-	} 
-
-	// case if line is horizontal
-	if (dy == 0) {
-		for (int u = std::min(a[0], b[0]); u < std::max(a[0], b[0]); u++) {
-			Fragment frag;
-			frag.fb_position.x = floor(u) + 0.5f;
-			frag.fb_position.y = floor(a[1]) + 0.5f;
-			frag.fb_position.z = (u + 0.5 - a[0]) / (b[0] - a[0]) * (b[2] - a[2]) + a[2];
-			frag.attributes = va.attributes;
-			frag.derivatives.fill(Vec2(0.0f, 0.0f));
-			emit_fragment(frag);
-		}
-		return;
-	}
-
 	int i, j;
 
-	// Bresenham's line algorithm
+	// define major axis
 	if (dx > dy) {
 		i = 0;
 		j = 1;
@@ -435,33 +395,100 @@ void Pipeline<p, P, flags>::rasterize_line(
 		j = 0;
 	}
 
+	int slope = 1;
 	if (a[i] > b[i]) {
 		std::swap(a, b);
+		slope = -1;
 	}
 
 	float t1 = std::floor(a[i]);
 	float t2 = std::floor(b[i]);
 
-	for (int u = t1; u < t2; u++) {
+	// if two points are in same pixel
+	if (t1 == t2 && std::floor(a[j]) == std::floor(b[j])) {
+		if (inDiamond(a[0], a[1]) != inDiamond(b[0], b[1])) {
+			drawLine(floor(a[0]) + 0.5f, floor(a[1]) + 0.5f, a[2]);
+		}
+		return;
+	}
+
+	// case if line is vertical
+	if (dx == 0) {
+
+		// if starts in bottom quadrants or inside the diamond then okay
+		if (a[1] < t1 + 0.5f || inDiamond(a[0], a[1])) {
+			drawLine(floor(a[0]) + 0.5f, floor(a[1]) + 0.5f, a[2]);
+		}
+
+		// if ends at top quadrants or inside the diamond then okay
+		if (b[1] > t2 - 0.5f || inDiamond(b[0], b[1])) {
+			drawLine(floor(b[0]) + 0.5f, floor(b[1]) + 0.5f, b[2]);
+		}
+
+		for (int u = std::min(a[1], b[1]) + 1; u < std::max(a[1], b[1]) - 1; u++) {
+			drawLine(floor(a[0]) + 0.5f, u + 0.5f, (u + 0.5 - a[1]) / (b[1] - a[1]) * (b[2] - a[2]) + a[2]);
+		}
+		return;
+	} 
+
+	// case if line is horizontal
+	if (dy == 0) {
+
+		// if starts in left quadrants or inside the diamond then okay
+		if (a[0] < t1 + 0.5f || inDiamond(a[0], a[1])) {
+			drawLine(floor(a[0]) + 0.5f, floor(a[1]) + 0.5f, a[2]);
+		}
+
+		// if ends in right quadrants or inside the diamond then okay
+		if (b[0] > t2 - 0.5f || inDiamond(b[0], b[1])) {
+			drawLine(floor(b[0]) + 0.5f, floor(b[1]) + 0.5f, b[2]);
+		}
+
+		for (int u = std::min(a[0], b[0]) + 1; u < std::max(a[0], b[0]) - 1; u++) {
+			drawLine(u + 0.5f, floor(a[1]) + 0.5f, (u + 0.5 - a[0]) / (b[0] - a[0]) * (b[2] - a[2]) + a[2]);
+		}
+		return;
+	}
+
+	// if slope is positive, then starting in left-bottom quadrant on in diamond is okay
+	if (slope == 1 && (a[1] < -a[0] + 0.5f || inDiamond(a[0], a[1]))) {
+		drawLine(floor(a[0]) + 0.5f, floor(a[1]) + 0.5f, a[2]);
+	}
+
+	// if slope is negative, then starting in left-top quadrant on in diamond is okay
+	if (slope == -1 && (a[1] > a[0] + 0.5f || inDiamond(a[0], a[1]))) {
+		drawLine(floor(a[0]) + 0.5f, floor(a[1]) + 0.5f, a[2]);
+	}
+
+	// if slope is positive, then ending in right-top quadrant on in diamond is okay
+	if (slope == 1 && (b[1] < -b[0] + 1.5f || inDiamond(b[0], b[1]))) {
+		drawLine(floor(b[0]) + 0.5f, floor(b[1]) + 0.5f, b[2]);
+	}
+
+	// if slope is negative, then ending in right-bottom quadrant on in diamond is okay
+	if (slope == -1 && (b[1] > b[0] - 0.5f || inDiamond(b[0], b[1]))) {
+		drawLine(floor(b[0]) + 0.5f, floor(b[1]) + 0.5f, b[2]);
+	}
+
+	for (int u = t1 + 1; u < t2 - 1; u++) {
 
 		// percent moved along the longer axis
 		float w = (u + 0.5f - a[i]) / (b[i] - a[i]);
 		float v = w * (b[j] - a[j]) + a[j];
+
+		float x, y;
 		
 		// define fragment to shade
 		Fragment frag;
 		if (dx > dy) {		
-			frag.fb_position.x = u + 0.5f;
-			frag.fb_position.y = v + 0.5f;
+			x = u + 0.5f;
+			y = v + 0.5f;
 		} else {
-			frag.fb_position.x = v + 0.5f;
-			frag.fb_position.y = u + 0.5f;
+			x = v + 0.5f;
+			y = u + 0.5f;
 		}
 
-		frag.fb_position.z = w * (vb.fb_position.z - va.fb_position.z) + va.fb_position.z;
-		frag.attributes = va.attributes;
-		frag.derivatives.fill(Vec2(0.0f, 0.0f));
-		emit_fragment(frag);
+		drawLine(x, y, w * (vb.fb_position.z - va.fb_position.z) + va.fb_position.z);
 	}
 }
 
@@ -558,10 +585,10 @@ void Pipeline<p, P, flags>::rasterize_triangle(
 		// 		}
 				
 		// 		// linearly interpolate to get z-coordinate
-		// 		float mid_ab = lerp(a[2], b[2], c);	
+		// 		float mid_ab = lerp(a, b, )
 
 		// 		// apply perspective flag to get correct interpolation
-
+				
 		// 		//
 
 		// 	}
