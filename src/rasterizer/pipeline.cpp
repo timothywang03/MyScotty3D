@@ -348,6 +348,7 @@ void Pipeline<p, P, flags>::clip_triangle(
  *
  * If you wish to work in fixed point, check framebuffer.h for useful information about the framebuffer's dimensions.
  */
+
 template<PrimitiveType p, class P, uint32_t flags>
 void Pipeline<p, P, flags>::rasterize_line(
 	ClippedVertex const& va, ClippedVertex const& vb,
@@ -361,15 +362,107 @@ void Pipeline<p, P, flags>::rasterize_line(
 	// this function!
 	// The OpenGL specification section 3.5 may also come in handy.
 
-	{ // As a placeholder, draw a point in the middle of the line:
-		//(remove this code once you have a real implementation)
-		Fragment mid;
-		mid.fb_position = (va.fb_position + vb.fb_position) / 2.0f;
-		mid.attributes = va.attributes;
-		mid.derivatives.fill(Vec2(0.0f, 0.0f));
-		emit_fragment(mid);
+	Vec3 a = Vec3{va.fb_position.x, va.fb_position.y, va.fb_position.z};
+	Vec3 b = Vec3{vb.fb_position.x, vb.fb_position.y, vb.fb_position.z};
+
+	// endpoint checking for diamond rule
+	if (std::abs(a[0] - std::floor(a[0]) + 0.5) + std::abs(a[1] - std::floor(a[1]) + 0.5) < 0.5) {
+		a[0] = std::floor(a[0]) + 0.5;
+		a[1] = std::floor(a[1]) + 0.5;
 	}
 
+	float dx = std::abs(b[0] - a[0]);
+	float dy = std::abs(b[1] - a[1]);
+
+	//! TODO: FIX DIAMOND CHECK
+	// // endpoint diamond check
+	// if (std::abs(a[0] - (floor(a[0]) + 0.5f)) + std::abs(a[1] - (floor(a[1]) + 0.5f)) < 0.5f) {
+	// 	Fragment frag;
+	// 	frag.fb_position.x = floor(a[0]) + 0.5f;
+	// 	frag.fb_position.y = floor(a[1]) + 0.5f;
+	// 	frag.fb_position.z = a[2];
+	// 	frag.attributes = va.attributes;
+	// 	frag.derivatives.fill(Vec2(0.0f, 0.0f));
+	// 	emit_fragment(frag);
+	// }
+
+	// if (std::abs(b[0] - (floor(b[0]) + 0.5f)) + std::abs(b[1] - (floor(b[1]) + 0.5f)) < 0.5f) {
+	// 	Fragment frag;
+	// 	frag.fb_position.x = floor(b[0]) + 0.5f;
+	// 	frag.fb_position.y = floor(b[1]) + 0.5f;
+	// 	frag.fb_position.z = b[2];
+	// 	frag.attributes = va.attributes;
+	// 	frag.derivatives.fill(Vec2(0.0f, 0.0f));
+	// 	emit_fragment(frag);
+	// }
+
+	// case if line is vertical
+	if (dx == 0) {
+		for (int u = std::min(a[1], b[1]); u < std::max(a[1], b[1]); u++) {
+			Fragment frag;
+			frag.fb_position.x = floor(a[0]) + 0.5f;
+			frag.fb_position.y = floor(u) + 0.5f;
+			frag.fb_position.z = (u + 0.5 - a[1]) / (b[1] - a[1]) * (b[2] - a[2]) + a[2];
+			frag.attributes = va.attributes;
+			frag.derivatives.fill(Vec2(0.0f, 0.0f));
+			emit_fragment(frag);
+		}
+		return;
+	} 
+
+	// case if line is horizontal
+	if (dy == 0) {
+		for (int u = std::min(a[0], b[0]); u < std::max(a[0], b[0]); u++) {
+			Fragment frag;
+			frag.fb_position.x = floor(u) + 0.5f;
+			frag.fb_position.y = floor(a[1]) + 0.5f;
+			frag.fb_position.z = (u + 0.5 - a[0]) / (b[0] - a[0]) * (b[2] - a[2]) + a[2];
+			frag.attributes = va.attributes;
+			frag.derivatives.fill(Vec2(0.0f, 0.0f));
+			emit_fragment(frag);
+		}
+		return;
+	}
+
+	int i, j;
+
+	// Bresenham's line algorithm
+	if (dx > dy) {
+		i = 0;
+		j = 1;
+	} else {
+		i = 1;
+		j = 0;
+	}
+
+	if (a[i] > b[i]) {
+		std::swap(a, b);
+	}
+
+	float t1 = std::floor(a[i]);
+	float t2 = std::floor(b[i]);
+
+	for (int u = t1; u < t2; u++) {
+
+		// percent moved along the longer axis
+		float w = (u + 0.5f - a[i]) / (b[i] - a[i]);
+		float v = w * (b[j] - a[j]) + a[j];
+		
+		// define fragment to shade
+		Fragment frag;
+		if (dx > dy) {		
+			frag.fb_position.x = u + 0.5f;
+			frag.fb_position.y = v + 0.5f;
+		} else {
+			frag.fb_position.x = v + 0.5f;
+			frag.fb_position.y = u + 0.5f;
+		}
+
+		frag.fb_position.z = w * (vb.fb_position.z - va.fb_position.z) + va.fb_position.z;
+		frag.attributes = va.attributes;
+		frag.derivatives.fill(Vec2(0.0f, 0.0f));
+		emit_fragment(frag);
+	}
 }
 
 /*
@@ -420,6 +513,59 @@ void Pipeline<p, P, flags>::rasterize_triangle(
 	if constexpr ((flags & PipelineMask_Interp) == Pipeline_Interp_Flat) {
 		// A1T3: flat triangles
 		// TODO: rasterize triangle (see block comment above this function).
+
+		// std::vector<float> a = {va.fb_position.x, va.fb_position.y, va.fb_position.z};
+		// std::vector<float> b = {vb.fb_position.x, vb.fb_position.y, vb.fb_position.z};
+		// std::vector<float> c = {vc.fb_position.x, vc.fb_position.y, vc.fb_position.z};
+
+		// // precomputation constants
+		// const Vec2 ab = xy(b - a);
+		// const Vec2 ba = xy(a - b);
+		// const Vec2 ac = xy(c - a);
+		// const Vec2 ca = xy(a - c);
+		// const Vec2 bc = xy(c - b);
+		// const Vec2 cb = xy(b - c);
+		// const Vec2 acxab = cross(ac, ab);
+		// const Vec2 cbxca = cross(cb, ca);
+		// const Vec2 baxbc = cross(ba, bc);
+		// const Vec2 abxac = cross(ab, ac);
+		// const Vec2 caxcb = cross(ca, cb);
+		// const Vec2 bcxba = cross(bc, ba);
+
+		// // define bounding box of the triangle
+		// float x_min = std::min(a[0], b[0], c[0]);
+		// float y_min = std::min(a[1], b[1], c[1]);
+		// float x_max = std::max(a[0], b[0], c[0]);
+		// float y_max = std::max(a[1], b[1], c[1]);
+
+		// // grab all the points in the triangle and also interpolate their z-coordinate
+		// std::vector<Vec3> insidePoints;
+		// for (int i = x_min; i < x_max, i++) {
+		// 	for (int j = y_min; j < y_max; j++){
+
+		// 		Vec2 q = Vec2{i + 0.5f, j + 0.5f};
+		// 		Vec2 aq = q - a;
+		// 		Vec2 bq = q - b;
+		// 		Vec2 cq = q - c;
+		// 		Vec3 acxaq = cross(ac, aq);
+		// 		Vec3 cbxcq = cross(cb, cq);
+		// 		Vec3 baxbq = cross(ba, bq);
+
+		// 		// check for membership in the triangle
+		// 		if ((dot(acxab, acxaq) < 0 && dot(cbxca, cbxcq) < 0 && dot(baxbc, baxbq) < 0) && 
+		// 			(dot(abxac, acxaq) > 0 && dot(caxcb, cbxcq) > 0 && dot(bcxba, baxbq) > 0)) {
+		// 			continue;
+		// 		}
+				
+		// 		// linearly interpolate to get z-coordinate
+		// 		float mid_ab = lerp(a[2], b[2], c);	
+
+		// 		// apply perspective flag to get correct interpolation
+
+		// 		//
+
+		// 	}
+		// }
 
 		// As a placeholder, here's code that draws some lines:
 		//(remove this and replace it with a real solution)
