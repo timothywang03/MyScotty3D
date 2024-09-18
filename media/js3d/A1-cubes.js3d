@@ -87,7 +87,7 @@
 				"material":"lam_white",
 				"visible":true,
 				"collides":true,
-				"draw style":"Wireframe",
+				"draw style":"Flat",
 				"blend style":"Blend Replace",
 				"depth style":"Depth Less"
 			},
@@ -107,7 +107,7 @@
 				"material":"lam_white",
 				"visible":true,
 				"collides":true,
-				"draw style":"Smooth",
+				"draw style":"Flat",
 				"blend style":"Blend Replace",
 				"depth style":"Depth Less"
 			},
@@ -117,7 +117,7 @@
 				"material":"lam_white",
 				"visible":true,
 				"collides":true,
-				"draw style":"Correct",
+				"draw style":"Flat",
 				"blend style":"Blend Replace",
 				"depth style":"Depth Less"
 			}

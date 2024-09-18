@@ -416,13 +416,24 @@ void Pipeline<p, P, flags>::rasterize_line(
 		i = 1;
 		j = 0;
 	}
-
+	
 	if (a[i] > b[i]) {
 		std::swap(a, b);
 	}
 
 	float t1 = std::floor(a[i]);
 	float t2 = std::floor(b[i]);
+	
+	// auto getSlope = [&](Vec3 a, Vec3 b) {
+	// 	float m = (b[j] - a[j]) / (b[i] - a[i]);
+	// 	return m;
+	// };
+
+	// auto getIntercept = [&](Vec3 a, Vec3 b) {
+	// 	float m = getSlope(a, b);
+	// 	float intercept = a[1] - m * a[0];
+	// 	return intercept;
+	// };	
 
 	// if two points are in same pixel
 	if (t1 == t2 && std::floor(a[j]) == std::floor(b[j])) {
@@ -441,11 +452,11 @@ void Pipeline<p, P, flags>::rasterize_line(
 		}
 
 		// if ends at top quadrants or inside the diamond then okay
-		if (b[1] > t2 - 0.5f || inDiamond(b[0], b[1])) {
+		if (b[1] > t2 + 0.5f || inDiamond(b[0], b[1])) {
 			drawLine(floor(b[0]) + 0.5f, floor(b[1]) + 0.5f, b[2]);
 		}
 
-		for (int u = std::min(a[1], b[1]) + 1; u < std::max(a[1], b[1]) - 1; u++) {
+		for (int u = std::min(a[1], b[1]) + 1; u < floor(std::max(a[1], b[1])); u++) {
 			drawLine(floor(a[0]) + 0.5f, u + 0.5f, (u + 0.5 - a[1]) / (b[1] - a[1]) * (b[2] - a[2]) + a[2]);
 		}
 		return;
@@ -460,11 +471,11 @@ void Pipeline<p, P, flags>::rasterize_line(
 		}
 
 		// if ends in right quadrants or inside the diamond then okay
-		if (b[0] > t2 - 0.5f || inDiamond(b[0], b[1])) {
+		if (b[0] > t2 + 0.5f || inDiamond(b[0], b[1])) {
 			drawLine(floor(b[0]) + 0.5f, floor(b[1]) + 0.5f, b[2]);
 		}
 
-		for (int u = std::min(a[0], b[0]) + 1; u < std::max(a[0], b[0]) - 1; u++) {
+		for (int u = std::min(a[0], b[0]) + 1; u < std::floor(std::max(a[0], b[0])); u++) {
 			drawLine(u + 0.5f, floor(a[1]) + 0.5f, (u + 0.5 - a[0]) / (b[0] - a[0]) * (b[2] - a[2]) + a[2]);
 		}
 		return;
@@ -492,13 +503,10 @@ void Pipeline<p, P, flags>::rasterize_line(
 		}
 	}
 
-	for (int u = t1 + 1; u < t2 - 1; u++) {
-
+	for (float u = t1 + 1; u < t2; u++) {
 		// percent moved along the longer axis
 		float w = (u + 0.5f - a[i]) / (b[i] - a[i]);
 		float v = w * (b[j] - a[j]) + a[j];
-
-		std::cout << "u: " << u << " v: " << v << std::endl;
 
 		float x, y;
 		
