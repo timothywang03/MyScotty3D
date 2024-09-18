@@ -142,9 +142,9 @@ void Pipeline<primitive_type, Program, flags>::run(std::vector<Vertex> const& ve
 			// "Less" means the depth test passes when the new fragment has depth less than the stored depth.
 			// A1T4: Depth_Less
 			// TODO: implement depth test! We want to only emit fragments that have a depth less than the stored depth, hence "Depth_Less".
-			if (f.fb_position.z >= fb_depth) {
-				continue; 
-			}
+			// if (f.fb_position.z >= fb_depth) {
+			// 	continue; 
+			// }
 
 		} else {
 			static_assert((flags & PipelineMask_Depth) <= Pipeline_Depth_Always, "Unknown depth test flag.");
@@ -168,12 +168,12 @@ void Pipeline<primitive_type, Program, flags>::run(std::vector<Vertex> const& ve
 			} else if constexpr ((flags & PipelineMask_Blend) == Pipeline_Blend_Add) {
 				// A1T4: Blend_Add
 				// TODO: framebuffer color should have fragment color multiplied by fragment opacity added to it.
-				fb_color = sf.color + fb_color; //<-- replace this line
+				fb_color = sf.color; //<-- replace this line
 			} else if constexpr ((flags & PipelineMask_Blend) == Pipeline_Blend_Over) {
 				// A1T4: Blend_Over
 				// TODO: set framebuffer color to the result of "over" blending (also called "alpha blending") the fragment color over the framebuffer color, using the fragment's opacity
 				// 		 You may assume that the framebuffer color has its alpha premultiplied already, and you just want to compute the resulting composite color
-				fb_color = sf.color + fb_color * (1 - sf.opacity); //<-- replace this line
+				fb_color = sf.color; //<-- replace this line
 			} else {
 				static_assert((flags & PipelineMask_Blend) <= Pipeline_Blend_Over, "Unknown blending flag.");
 			}
@@ -641,14 +641,14 @@ void Pipeline<p, P, flags>::rasterize_triangle(
 		};
 
 		// define bounding box of the triangle
-		float x_min = std::min(std::min(a[0], b[0]), c[0]);
-		float y_min = std::min(std::min(a[1], b[1]), c[1]);
-		float x_max = std::max(std::max(a[0], b[0]), c[0]);
-		float y_max = std::max(std::max(a[1], b[1]), c[1]);
+		int x_min = std::min(std::min(a[0], b[0]), c[0]);
+		int y_min = std::min(std::min(a[1], b[1]), c[1]);
+		int x_max = std::max(std::max(a[0], b[0]), c[0]);
+		int y_max = std::max(std::max(a[1], b[1]), c[1]);
 
 		// grab all the points in the triangle and also interpolate their z-coordinate
-		for (float i = x_min; i <= x_max; i++) {
-			for (float j = y_min; j <= y_max; j++){
+		for (int i = x_min; i <= x_max; i++) {
+			for (int j = y_min; j <= y_max; j++){
 
 				Vec3 q = Vec3{i + 0.5f, j + 0.5f, (float)0};
 				Vec3 aq = q - a;
@@ -667,7 +667,7 @@ void Pipeline<p, P, flags>::rasterize_triangle(
 				float phi_b = (acxaq.z / 2) / area;
 				float phi_c = 1 - phi_a - phi_b;
 				float k = phi_a * az + phi_b * bz + phi_c * cz;
-				q = Vec3(i, j, k);
+				q.z = k;
 
 				Fragment frag;
 				frag.fb_position = q;
@@ -676,12 +676,6 @@ void Pipeline<p, P, flags>::rasterize_triangle(
 				emit_fragment(frag);
 			}
 		}
-
-		// As a placeholder, here's code that draws some lines:
-		//(remove this and replace it with a real solution)
-		Pipeline<PrimitiveType::Lines, P, flags>::rasterize_line(va, vb, emit_fragment);
-		Pipeline<PrimitiveType::Lines, P, flags>::rasterize_line(vb, vc, emit_fragment);
-		Pipeline<PrimitiveType::Lines, P, flags>::rasterize_line(vc, va, emit_fragment);
 	} else if constexpr ((flags & PipelineMask_Interp) == Pipeline_Interp_Smooth) {
 		// A1T5: screen-space smooth triangles
 		// TODO: rasterize triangle (see block comment above this function).
