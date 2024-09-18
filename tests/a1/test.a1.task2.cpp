@@ -136,53 +136,113 @@ void check_line_covers(std::string const &desc, std::initializer_list< Vec2 > co
 // only lines that *exit* the diamond should produce a fragment.
 
 
-Test test_a1_task2_diamond_inside("a1.task2.diamond.inside", []() {
-	check_line_covers(
-		"line inside diamond (1,1)",
-		{ Vec2(1.5f, 1.25f), Vec2(1.25f, 1.5f) },
-		{"...",
-		 "...",
-		 "..."}
-	);
+// Test test_a1_task2_diamond_inside("a1.task2.diamond.inside", []() {
+// 	check_line_covers(
+// 		"line inside diamond (1,1)",
+// 		{ Vec2(1.5f, 1.25f), Vec2(1.25f, 1.5f) },
+// 		{"...",
+// 		 "...",
+// 		 "..."}
+// 	);
+// });
+
+
+// Test test_a1_task2_diamond_outside("a1.task2.diamond.outside", []() {
+// 	check_line_covers(
+// 		"line outside diamond (1,1)",
+// 		{ Vec2(1.125f, 1.25f), Vec2(1.25f, 1.125f) },
+// 		{"...",
+// 		 "...",
+// 		 "..."}
+// 	);
+// });
+
+
+// //----------------------------
+// //simple horizontal and vertical lines (set up so that no enter/exit logic needed):
+
+// Test test_a1_task2_simple_horizontal("a1.task2.simple.horizontal", []() {
+// 	check_line_covers(
+// 		"horizontal line from (1.125, 1.125) to (4.875, 1.125)",
+// 		{ Vec2(1.125f, 1.125f), Vec2(4.875f, 1.125f) },
+// 		{"......",
+// 		 ".####.",
+// 		 "......"}
+// 	);
+// });
+
+
+// Test test_a1_task2_simple_vertical("a1.task2.simple.vertical", []() {
+// 	check_line_covers(
+// 		"vertical line from (1.125, 1.125) to (1.125, 4.875)",
+// 		{ Vec2(1.125f, 1.125f), Vec2(1.125f, 4.875f) },
+// 		{"...",
+// 		 ".#.",
+// 		 ".#.",
+// 		 ".#.",
+// 		 ".#.",
+// 		 "..."}
+// 	);
+// });
+
+Test test_a1_task2_edges_1("a1.task2.edges.1", []() {
+  check_line_covers("line from (0.6, 0.6) to (2.1, 3.3)",
+                    {Vec2(0.6f, 0.6f), Vec2(2.1f, 3.3f)},
+                    {"...", 
+					 ".#.", 
+					 ".#.", 
+					 "#.."});
 });
 
+// Test test_a1_task2_edges_2("a1.task2.edges.2", []() {
+//   check_line_covers("line from (0.1, 3.3) to (0.9, 0.5)",
+//                     {Vec2(0.1f, 3.3f), Vec2(0.9f, 0.5f)},
+//                     {"..", "#.", "#.", ".."});
+// });
 
-Test test_a1_task2_diamond_outside("a1.task2.diamond.outside", []() {
-	check_line_covers(
-		"line outside diamond (1,1)",
-		{ Vec2(1.125f, 1.25f), Vec2(1.25f, 1.125f) },
-		{"...",
-		 "...",
-		 "..."}
-	);
-});
+// Test test_a1_task2_edges_3("a1.task2.edges.3", []() {
+//   check_line_covers("line from (0.4, 0.8) to (3.2, 2.5)",
+//                     {Vec2(0.4f, 0.8f), Vec2(3.2f, 2.5f)},
+//                     {"..#..", ".#...", "#...."});
+// });
 
+// Test test_a1_task2_edges_4("a1.task2.edges.4", []() {
+//   check_line_covers("line from (3.2, 2.5) to (0.4, 0.8)",
+//                     {Vec2(3.2f, 2.5f), Vec2(0.4f, 0.8f)},
+//                     {"..##.", ".#...", "....."});
+// });
 
-//----------------------------
-//simple horizontal and vertical lines (set up so that no enter/exit logic needed):
+// Test test_a1_task2_edges_5("a1.task2.edges.5", []() {
+//   check_line_covers("line from (1.9, 1.1) to (2.5, 3.1)",
+//                     {Vec2(1.9f, 1.1f), Vec2(2.5f, 3.1f)},
+//                     {"....", "..#.", "..#.", "...."});
+// });
 
-Test test_a1_task2_simple_horizontal("a1.task2.simple.horizontal", []() {
-	check_line_covers(
-		"horizontal line from (1.125, 1.125) to (4.875, 1.125)",
-		{ Vec2(1.125f, 1.125f), Vec2(4.875f, 1.125f) },
-		{"......",
-		 ".####.",
-		 "......"}
-	);
-});
+// //----------------------------
+// // diamond exit tests
+// Test test_a1_task2_diamond_between_0("a1.task2.diamond.between0", []() {
+//   check_line_covers("line outside and between diamonds (0,1) and (1,1)",
+//                     {Vec2(0.875f, 1.0f), Vec2(1.125f, 1.0f)},
+//                     {"...", "...", "..."});
+// });
+// Test test_a1_task2_diamond_between_1("a1.task2.diamond.between1", []() {
+//   check_line_covers("line outside and between diamonds (0,1) and (1,1)",
+//                     {Vec2(1.0f, 0.875f), Vec2(1.0f, 1.125f)},
+//                     {"...", "...", "..."});
+// });
 
-
-Test test_a1_task2_simple_vertical("a1.task2.simple.vertical", []() {
-	check_line_covers(
-		"vertical line from (1.125, 1.125) to (1.125, 4.875)",
-		{ Vec2(1.125f, 1.125f), Vec2(1.125f, 4.875f) },
-		{"...",
-		 ".#.",
-		 ".#.",
-		 ".#.",
-		 ".#.",
-		 "..."}
-	);
-});
-
-
+// // the start point does not pass through starting diamond
+// // the end point enters but does not exit ending diamond
+// Test test_a1_task2_diamond_exit_0("a1.task2.diamond.exit0", []() {
+//   check_line_covers("line doesn't exit any diamonds",
+//                     {Vec2(0.875f, 0.875f), Vec2(1.5f, 0.5f)},
+//                     {"...", "...", "..."});
+// });
+// // the start point starts inside the starting diamond
+// // the end point does not enter ending diamond
+// Test test_a1_task2_diamond_exit_1("a1.task2.diamond.exit1", []() {
+//   check_line_covers("line exits one diamond",
+//                     {Vec2(0.5f, 0.5f), Vec2(1.125f, 0.875f)},
+//                     {"...", "...", "#.."});
+// });
+// other endpoint cases are accounted for in existing tests

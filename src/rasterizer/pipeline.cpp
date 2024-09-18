@@ -142,6 +142,10 @@ void Pipeline<primitive_type, Program, flags>::run(std::vector<Vertex> const& ve
 			// "Less" means the depth test passes when the new fragment has depth less than the stored depth.
 			// A1T4: Depth_Less
 			// TODO: implement depth test! We want to only emit fragments that have a depth less than the stored depth, hence "Depth_Less".
+			if (f.fb_position.z >= fb_depth) {
+				continue; 
+			}
+
 		} else {
 			static_assert((flags & PipelineMask_Depth) <= Pipeline_Depth_Always, "Unknown depth test flag.");
 		}
@@ -164,12 +168,12 @@ void Pipeline<primitive_type, Program, flags>::run(std::vector<Vertex> const& ve
 			} else if constexpr ((flags & PipelineMask_Blend) == Pipeline_Blend_Add) {
 				// A1T4: Blend_Add
 				// TODO: framebuffer color should have fragment color multiplied by fragment opacity added to it.
-				fb_color = sf.color; //<-- replace this line
+				fb_color = sf.color + fb_color; //<-- replace this line
 			} else if constexpr ((flags & PipelineMask_Blend) == Pipeline_Blend_Over) {
 				// A1T4: Blend_Over
 				// TODO: set framebuffer color to the result of "over" blending (also called "alpha blending") the fragment color over the framebuffer color, using the fragment's opacity
 				// 		 You may assume that the framebuffer color has its alpha premultiplied already, and you just want to compute the resulting composite color
-				fb_color = sf.color; //<-- replace this line
+				fb_color = sf.color + fb_color * (1 - sf.opacity); //<-- replace this line
 			} else {
 				static_assert((flags & PipelineMask_Blend) <= Pipeline_Blend_Over, "Unknown blending flag.");
 			}
@@ -378,7 +382,25 @@ void Pipeline<p, P, flags>::rasterize_line(
 
 	// helper function to determine if an x or y is in the diamond
 	auto inDiamond = [](float x, float y) {
+		if (x - std::floor(x) + y - std::floor(y) == 0.5f) {
+			return true;
+		}
 		return std::abs(x - std::floor(x) - 0.5f) + std::abs(y - std::floor(y) - 0.5f) < 0.5f;
+	};
+
+	// get the quadrant a point is in (-1 = in-diamond, 0 = bottom-left, 1 = bottom-right, 2 = top-left, 3 = top-right)
+	auto getQuadrant = [&](float x, float y) {
+		if (inDiamond(x, y)) {
+			return -1;
+		} else if ((x - std::floor(x)) + (y - std::floor(y)) < 0.5f) {
+			return 0;
+		} else if ((x - std::floor(x)) + (y - std::floor(y)) > 1.5f) {
+			return 3;
+		} else if ((x - std::floor(x)) - (y - std::floor(y)) > 0.5f) {
+			return 1;
+		} else {
+			return 2;
+		}
 	};
 
 	float dx = std::abs(b[0] - a[0]);
@@ -395,10 +417,8 @@ void Pipeline<p, P, flags>::rasterize_line(
 		j = 0;
 	}
 
-	int slope = 1;
 	if (a[i] > b[i]) {
 		std::swap(a, b);
-		slope = -1;
 	}
 
 	float t1 = std::floor(a[i]);
@@ -450,24 +470,26 @@ void Pipeline<p, P, flags>::rasterize_line(
 		return;
 	}
 
-	// if slope is positive, then starting in left-bottom quadrant on in diamond is okay
-	if (slope == 1 && (a[1] < -a[0] + 0.5f || inDiamond(a[0], a[1]))) {
+	// if starting in right bottom or left top, need to project a[0] to halfway point 
+	// and check if a[1] is in the diamond
+	if (inDiamond(a[0], a[1]) || getQuadrant(a[0], a[1]) == 0) {
 		drawLine(floor(a[0]) + 0.5f, floor(a[1]) + 0.5f, a[2]);
+	} else if (getQuadrant(a[0], a[1]) != 3) {
+		float w = (floor(a[0]) + 0.5f - a[0]) / (b[0] - a[0]);
+		float v = w * (b[1] - a[1]) + a[1];
+		if (inDiamond(floor(a[0]) + 0.5f, v)) {
+			drawLine(floor(a[0]) + 0.5f, floor(a[1]) + 0.5f, a[2]);
+		}
 	}
 
-	// if slope is negative, then starting in left-top quadrant on in diamond is okay
-	if (slope == -1 && (a[1] > a[0] + 0.5f || inDiamond(a[0], a[1]))) {
-		drawLine(floor(a[0]) + 0.5f, floor(a[1]) + 0.5f, a[2]);
-	}
-
-	// if slope is positive, then ending in right-top quadrant on in diamond is okay
-	if (slope == 1 && (b[1] < -b[0] + 1.5f || inDiamond(b[0], b[1]))) {
+	if (inDiamond(b[0], b[1]) || getQuadrant(b[0], b[1]) == 3) {
 		drawLine(floor(b[0]) + 0.5f, floor(b[1]) + 0.5f, b[2]);
-	}
-
-	// if slope is negative, then ending in right-bottom quadrant on in diamond is okay
-	if (slope == -1 && (b[1] > b[0] - 0.5f || inDiamond(b[0], b[1]))) {
-		drawLine(floor(b[0]) + 0.5f, floor(b[1]) + 0.5f, b[2]);
+	} else if (getQuadrant(b[0], b[1]) != 0) {
+		float w = (floor(b[0]) + 0.5f - a[0]) / (b[0] - a[0]);
+		float v = w * (b[1] - a[1]) + a[1];
+		if (inDiamond(floor(b[0]) + 0.5f, v)) {
+			drawLine(floor(b[0]) + 0.5f, floor(b[1]) + 0.5f, b[2]);
+		}
 	}
 
 	for (int u = t1 + 1; u < t2 - 1; u++) {
@@ -476,16 +498,17 @@ void Pipeline<p, P, flags>::rasterize_line(
 		float w = (u + 0.5f - a[i]) / (b[i] - a[i]);
 		float v = w * (b[j] - a[j]) + a[j];
 
+		std::cout << "u: " << u << " v: " << v << std::endl;
+
 		float x, y;
 		
 		// define fragment to shade
-		Fragment frag;
 		if (dx > dy) {		
-			x = u + 0.5f;
-			y = v + 0.5f;
+			x = floor(u) + 0.5f;
+			y = floor(v) + 0.5f;
 		} else {
-			x = v + 0.5f;
-			y = u + 0.5f;
+			x = floor(v) + 0.5f;
+			y = floor(u) + 0.5f;
 		}
 
 		drawLine(x, y, w * (vb.fb_position.z - va.fb_position.z) + va.fb_position.z);
@@ -541,58 +564,110 @@ void Pipeline<p, P, flags>::rasterize_triangle(
 		// A1T3: flat triangles
 		// TODO: rasterize triangle (see block comment above this function).
 
-		// std::vector<float> a = {va.fb_position.x, va.fb_position.y, va.fb_position.z};
-		// std::vector<float> b = {vb.fb_position.x, vb.fb_position.y, vb.fb_position.z};
-		// std::vector<float> c = {vc.fb_position.x, vc.fb_position.y, vc.fb_position.z};
+		Vec3 a = Vec3(va.fb_position.x, va.fb_position.y, (float)0);
+		Vec3 b = Vec3(vb.fb_position.x, vb.fb_position.y, (float)0);
+		Vec3 c = Vec3(vc.fb_position.x, vc.fb_position.y, (float)0);
 
-		// // precomputation constants
-		// const Vec2 ab = xy(b - a);
-		// const Vec2 ba = xy(a - b);
-		// const Vec2 ac = xy(c - a);
-		// const Vec2 ca = xy(a - c);
-		// const Vec2 bc = xy(c - b);
-		// const Vec2 cb = xy(b - c);
-		// const Vec2 acxab = cross(ac, ab);
-		// const Vec2 cbxca = cross(cb, ca);
-		// const Vec2 baxbc = cross(ba, bc);
-		// const Vec2 abxac = cross(ab, ac);
-		// const Vec2 caxcb = cross(ca, cb);
-		// const Vec2 bcxba = cross(bc, ba);
+		float az = va.fb_position.z;
+		float bz = vb.fb_position.z;
+		float cz = vc.fb_position.z;
 
-		// // define bounding box of the triangle
-		// float x_min = std::min(a[0], b[0], c[0]);
-		// float y_min = std::min(a[1], b[1], c[1]);
-		// float x_max = std::max(a[0], b[0], c[0]);
-		// float y_max = std::max(a[1], b[1], c[1]);
+		// convert winding order of triangle to be clockwise
+		if (cross(b - a, c - a).z < 0) {
+			std::swap(b, c);
+			std::swap(bz, cz);
+		}
 
-		// // grab all the points in the triangle and also interpolate their z-coordinate
-		// std::vector<Vec3> insidePoints;
-		// for (int i = x_min; i < x_max, i++) {
-		// 	for (int j = y_min; j < y_max; j++){
+		// precomputation constants
+		const Vec3 ab = b - a;
+		const Vec3 ba = a - b;
+		const Vec3 ac = c - a;
+		const Vec3 ca = a - c;
+		const Vec3 bc = c - b;
+		const Vec3 cb = b - c;
+		const Vec3 acxab = cross(ac, ab);
+		const Vec3 cbxca = cross(cb, ca);
+		const Vec3 baxbc = cross(ba, bc);
+		const Vec3 abxac = cross(ab, ac);
+		const Vec3 caxcb = cross(ca, cb);
+		const Vec3 bcxba = cross(bc, ba);
 
-		// 		Vec2 q = Vec2{i + 0.5f, j + 0.5f};
-		// 		Vec2 aq = q - a;
-		// 		Vec2 bq = q - b;
-		// 		Vec2 cq = q - c;
-		// 		Vec3 acxaq = cross(ac, aq);
-		// 		Vec3 cbxcq = cross(cb, cq);
-		// 		Vec3 baxbq = cross(ba, bq);
+		const float area = acxab.z / 2;
 
-		// 		// check for membership in the triangle
-		// 		if ((dot(acxab, acxaq) < 0 && dot(cbxca, cbxcq) < 0 && dot(baxbc, baxbq) < 0) && 
-		// 			(dot(abxac, acxaq) > 0 && dot(caxcb, cbxcq) > 0 && dot(bcxba, baxbq) > 0)) {
-		// 			continue;
-		// 		}
+
+		auto checkMembership = [=](Vec3 acxaq, Vec3 cbxcq, Vec3 baxbq) {
+			// check for membership in the triangle
+			if ((dot(acxab, acxaq) < 0 || dot(cbxca, cbxcq) < 0 || dot(baxbc, baxbq) < 0) && 
+				(dot(abxac, acxaq) > 0 || dot(caxcb, cbxcq) > 0 || dot(bcxba, baxbq) > 0)) {
+				return true;
+			}
+			return false;
+		};
+
+		auto isTopEdge = [](Vec3 u, Vec3 v, Vec3 w) {
+			if (u[1] == v[1] && v[1] > w[1]) {
+				return true;
+			}
+			return false;
+		};
+
+		auto isLeftEdge = [](Vec3 u, Vec3 v, Vec3 w) {
+			if (u[0] <= v[0] && v[1] > u[1]) {
+				return true;
+			}
+			return false;
+		};
+
+		auto checkEdgeOwnership = [=] (Vec3 acxaq, Vec3 cbxcq, Vec3 baxbq) {
+			// check for ownership of the edge
+			if (acxaq[2] != 0 && cbxcq[2] != 0 && baxbq[2] != 0) {
+				return true;
+			} else if (acxaq[2] == 0 && (isTopEdge(a, c, b) || isLeftEdge(a, c, b))) {
+				return true;
+			} else if (cbxcq[2] == 0 && (isTopEdge(b, c, a) || isLeftEdge(b, c, a))) {
+				return true;
+			} else if (baxbq[2] == 0 && (isTopEdge(b, a, c) || isLeftEdge(b, a, c))) {
+				return true;
+			}
+			return false;
+		};
+
+		// define bounding box of the triangle
+		float x_min = std::min(std::min(a[0], b[0]), c[0]);
+		float y_min = std::min(std::min(a[1], b[1]), c[1]);
+		float x_max = std::max(std::max(a[0], b[0]), c[0]);
+		float y_max = std::max(std::max(a[1], b[1]), c[1]);
+
+		// grab all the points in the triangle and also interpolate their z-coordinate
+		for (float i = x_min; i <= x_max; i++) {
+			for (float j = y_min; j <= y_max; j++){
+
+				Vec3 q = Vec3{i + 0.5f, j + 0.5f, (float)0};
+				Vec3 aq = q - a;
+				Vec3 bq = q - b;
+				Vec3 cq = q - c;
+				Vec3 acxaq = cross(ac, aq);
+				Vec3 cbxcq = cross(cb, cq);
+				Vec3 baxbq = cross(ba, bq);
+
+				if (checkMembership(acxaq, cbxcq, baxbq)) continue;
+
+				if (!checkEdgeOwnership(acxaq, cbxcq, baxbq)) continue;
 				
-		// 		// linearly interpolate to get z-coordinate
-		// 		float mid_ab = lerp(a, b, )
+				// linearly interpolate to get z-coordinate with barycentric coordinates
+				float phi_a = (cbxcq.z / 2) / area;
+				float phi_b = (acxaq.z / 2) / area;
+				float phi_c = 1 - phi_a - phi_b;
+				float k = phi_a * az + phi_b * bz + phi_c * cz;
+				q = Vec3(i, j, k);
 
-		// 		// apply perspective flag to get correct interpolation
-				
-		// 		//
-
-		// 	}
-		// }
+				Fragment frag;
+				frag.fb_position = q;
+				frag.attributes = va.attributes;
+				frag.derivatives.fill(Vec2(0.0f, 0.0f)); // no derivatives for flat shading
+				emit_fragment(frag);
+			}
+		}
 
 		// As a placeholder, here's code that draws some lines:
 		//(remove this and replace it with a real solution)
