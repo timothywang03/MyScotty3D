@@ -26,7 +26,31 @@ Spectrum sample_bilinear(HDR_Image const &image, Vec2 uv) {
 	// A1T6: sample_bilinear
 	//TODO: implement bilinear sampling strategy on texture 'image'
 
-	return sample_nearest(image, uv); //placeholder so image doesn't look blank
+	Vec2 uv_clamped = Vec2(std::clamp(uv.x, 0.0f, 1.0f), std::clamp(uv.y, 0.0f, 1.0f));
+
+	// define texel coordinates
+	float x = uv_clamped.x * image.w - 0.5f;
+	float y = uv_clamped.y * image.h - 0.5f;
+	int ix = int(std::floor(x));
+	int iy = int(std::floor(y));
+	ix = std::min(ix, int(image.w) - 1);
+	iy = std::min(iy, int(image.h) - 1);
+
+	// calculate the weights
+	float dx = x - ix;
+	float dy = y - iy;
+
+	// get the colors of the four texels
+	Spectrum c00 = image.at(ix, iy);
+	Spectrum c10 = image.at(std::min(ix + 1, int(image.w) - 1), iy);
+	Spectrum c01 = image.at(ix, std::min(iy + 1, int(image.h) - 1));
+	Spectrum c11 = image.at(std::min(ix + 1, int(image.w) - 1), std::min(iy + 1, int(image.h) - 1));
+
+	// interpolate the colors
+	Spectrum c0 = lerp(c00, c10, dx);
+	Spectrum c1 = lerp(c01, c11, dx);
+
+	return lerp(c0, c1, dy);
 }
 
 
@@ -34,7 +58,19 @@ Spectrum sample_trilinear(HDR_Image const &base, std::vector< HDR_Image > const 
 	// A1T6: sample_trilinear
 	//TODO: implement trilinear sampling strategy on using mip-map 'levels'
 
-	return sample_nearest(base, uv); //placeholder so image doesn't look blank
+	float disc_level = std::floor(lod);
+	Spectrum lo_tex = sample_bilinear(base, uv);
+	if (disc_level > 0.0f) {
+		lo_tex = sample_bilinear(levels[disc_level - 1], uv);
+	}
+
+	if (lod >= levels.size()) {
+		return sample_bilinear(levels[disc_level - 1], uv);
+	}
+
+	Spectrum hi_tex = sample_bilinear(levels[disc_level], uv);
+
+	return lerp(lo_tex, hi_tex, lod - disc_level);
 }
 
 /*
@@ -90,6 +126,18 @@ void generate_mipmap(HDR_Image const &base, std::vector< HDR_Image > *levels_) {
 
 		// A1T6: generate
 		//TODO: Write code to fill the levels of the mipmap hierarchy by downsampling
+
+		for (int i = 0; i < dst.w; i++) {
+			for (int j = 0; j < dst.h; j++) {
+				Spectrum c = Spectrum(0.0f, 0.0f, 0.0f);
+				for (int x = 0; x < 2; x++) {
+					for (int y = 0; y < 2; y++) {
+						c += src.at(2 * i + x, 2 * j + y);
+					}
+				}
+				dst.at(i, j) = c / 4.0f;
+			}
+		}
 
 		//Be aware that the alignment of the samples in dst and src will be different depending on whether the image is even or odd.
 
