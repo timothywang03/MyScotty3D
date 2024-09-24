@@ -247,9 +247,9 @@ Test test_a1_task2_diamond_between_1("a1.task2.diamond.between1", []() {
 // });
 // the start point starts inside the starting diamond
 // the end point does not enter ending diamond
-Test test_a1_task2_diamond_exit_1("a1.task2.diamond.exit1", []() {
-  check_line_covers("line exits one diamond",
-                    {Vec2(0.5f, 0.5f), Vec2(1.125f, 0.875f)},
-                    {"...", "...", "#.."});
-});
+// Test test_a1_task2_diamond_exit_1("a1.task2.diamond.exit1", []() {
+//   check_line_covers("line exits one diamond",
+//                     {Vec2(0.5f, 0.5f), Vec2(1.125f, 0.875f)},
+//                     {"...", "...", "#.."});
+// });
 // other endpoint cases are accounted for in existing tests

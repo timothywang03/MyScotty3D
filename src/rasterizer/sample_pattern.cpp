@@ -28,11 +28,17 @@ std::vector<SamplePattern> const& SamplePattern::all_patterns() {
 		// your SamplePattern is + more detailed your writeup is (such as with images or models for
 		// comparisons of these scenarios), the more extra credit can be awarded (no limit).
 
+		// implement 4 rooks antialiasing
+		// source: https://blog.demofox.org/2015/04/23/4-rook-antialiasing-rgss/
+		
 		// Please don't change the name or id
 		const uint32_t id = 0;
 		const std::string name = "Custom Sample Pattern";
 		// This will cause it to segfault when used, so be sure to change it!
-		std::vector<Vec3> centers_and_weights = {};
+		std::vector<Vec3> centers_and_weights = {Vec3(0.125f, 0.675, 0.25), 
+												 Vec3(0.375f, 0.125, 0.25),
+												 Vec3(0.625f, 0.875, 0.25),
+												 Vec3(0.875f, 0.325, 0.25)};
 		return SamplePattern(id, name, centers_and_weights);
 	};
 	static std::vector<SamplePattern> all = [&]() {
