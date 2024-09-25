@@ -99,6 +99,12 @@ Insert a picture of your sample pattern here (up to you on how you created it):
 
 Explanation of what your SamplePattern does and scenarios it would do well and poorly in:
 
+The sample pattern that I have implemented is something called the "4-rooks antialiasing method,"
+which places a sample at each interior edge of the pixel in what looks like a rotated 2x2 box. 
+This method is good at reducing aliasing artifacts in scenes with sharp edges, but it may not be as effective in scenes with smooth gradients.
+This is because there are only four sampled points, which might not be enough for detection of more sophisticated edges and gradients.
+Additionally, the 4-rooks antialiasing method is not as effective in scenes with high-frequency noise, as it does not have enough samples to average out the noise.
+
 Your completion will be graded based on the above answer, the reference `test.a1.task7.cpp` file and 
 checking that rasterizing the samplers scene will look decent.
 
@@ -106,12 +112,16 @@ checking that rasterizing the samplers scene will look decent.
 
 Your image:
 <div class="twentytwenty-container">
-    <img src="A1-writeup/reference/rasterize_image.png" alt="Your creation">
+    <img src="A1-writeup/reference/bunny.png" alt="Your creation">
 </div>
 
 Explanation of what it is and how you made it:
+This is a render of a big bunny and 3 little bunnies. The big bunny is the boss.
+
 
 Any free model sources you need to credit?
+https://poly.pizza/m/dIBHKlCkxOQ
+the small bunnies are native in the Scotty3D software.
 
 (##) EXTRA CREDIT FINAL
 
