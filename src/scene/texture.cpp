@@ -127,11 +127,11 @@ void generate_mipmap(HDR_Image const &base, std::vector< HDR_Image > *levels_) {
 		// A1T6: generate
 		//TODO: Write code to fill the levels of the mipmap hierarchy by downsampling
 
-		for (int i = 0; i < dst.w; i++) {
-			for (int j = 0; j < dst.h; j++) {
+		for (uint32_t i = 0; i < dst.w; i++) {
+			for (uint32_t j = 0; j < dst.h; j++) {
 				Spectrum c = Spectrum(0.0f, 0.0f, 0.0f);
-				for (int x = 0; x < 2; x++) {
-					for (int y = 0; y < 2; y++) {
+				for (uint32_t x = 0; x < 2; x++) {
+					for (uint32_t y = 0; y < 2; y++) {
 						c += src.at(2 * i + x, 2 * j + y);
 					}
 				}

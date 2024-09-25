@@ -719,7 +719,7 @@ void Pipeline<p, P, flags>::rasterize_triangle(
 
 				// interpolate and set attributes
 				frag.attributes = va.attributes;
-				for (int i = 0; i < va.attributes.size(); i++) {
+				for (uint32_t i = 0; i < va.attributes.size(); i++) {
 					frag.attributes[i] = va.attributes[i] * weights[0] + vb.attributes[i] * weights[1] + vc.attributes[i] * weights[2];
 				}
 
@@ -735,7 +735,7 @@ void Pipeline<p, P, flags>::rasterize_triangle(
 				fragx.attributes = va.attributes;
 				Vec3 fragx_weights = getBarycentricWeights(fragx.fb_position);
 
-				for (int i = 0; i < va.attributes.size(); i++) {
+				for (uint32_t i = 0; i < va.attributes.size(); i++) {
 					fragx.attributes[i] = va.attributes[i] * fragx_weights[0] + vb.attributes[i] * fragx_weights[1] + vc.attributes[i] * fragx_weights[2];
 				}
 
@@ -743,7 +743,7 @@ void Pipeline<p, P, flags>::rasterize_triangle(
 				fragy.fb_position = Vec3{q.x, q.y - 1.0f, 0.0f};
 				fragy.attributes = va.attributes;
 				Vec3 fragy_weights = getBarycentricWeights(fragy.fb_position);
-				for (int i = 0; i < va.attributes.size(); i++) {
+				for (uint32_t i = 0; i < va.attributes.size(); i++) {
 					fragy.attributes[i] = va.attributes[i] * fragy_weights[0] + vb.attributes[i] * fragy_weights[1] + vc.attributes[i] * fragy_weights[2];
 				}
 
@@ -793,7 +793,7 @@ void Pipeline<p, P, flags>::rasterize_triangle(
 
 				// interpolate and set attributes
 				frag.attributes = va.attributes;
-				for (int i = 0; i < va.attributes.size(); i++) {
+				for (uint32_t i = 0; i < va.attributes.size(); i++) {
 					float p_a = va.attributes[i] * va.inv_w;
 					float p_b = vb.attributes[i] * vb.inv_w;
 					float p_c = vc.attributes[i] * vc.inv_w;
@@ -814,7 +814,7 @@ void Pipeline<p, P, flags>::rasterize_triangle(
 				fragx.fb_position = Vec3{q.x - 1.0f, q.y, 0.0f};
 				fragx.attributes = va.attributes;
 				Vec3 fragx_weights = getBarycentricWeights(fragx.fb_position);
-				for (int i = 0; i < va.attributes.size(); i++) {
+				for (uint32_t i = 0; i < va.attributes.size(); i++) {
 					float p_a = va.attributes[i] * va.inv_w;
 					float p_b = vb.attributes[i] * vb.inv_w;
 					float p_c = vc.attributes[i] * vc.inv_w;
@@ -828,7 +828,7 @@ void Pipeline<p, P, flags>::rasterize_triangle(
 				fragy.fb_position = Vec3{q.x, q.y - 1.0f, 0.0f};
 				fragy.attributes = va.attributes;
 				Vec3 fragy_weights = getBarycentricWeights(fragy.fb_position);
-				for (int i = 0; i < va.attributes.size(); i++) {
+				for (uint32_t i = 0; i < va.attributes.size(); i++) {
 					float p_a = va.attributes[i] * va.inv_w;
 					float p_b = vb.attributes[i] * vb.inv_w;
 					float p_c = vc.attributes[i] * vc.inv_w;
