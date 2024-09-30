@@ -222,18 +222,124 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::bisect_edge(EdgeRef e) {
 std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::split_edge(EdgeRef e) {
 	// A2L2 (REQUIRED): split_edge
 
-	// HalfedgeRef h = e->halfedge;
-	// HalfedgeRef t = h->twin;
+	FaceRef f_boundary;
 
-	// VertexRef v1 = h->next->vertex;
-	// VertexRef v2 = t->next->vertex;
+	HalfedgeRef h = e->halfedge;
+	HalfedgeRef t = h->twin;
 
-	// // create a new vertex and connect it to v1, v2
-	// VertexRef mid = emplace_vertex();
-	// HalfedgeRef mid1 = emplace_halfedge();
+	VertexRef v1 = h->next->vertex;
+	VertexRef v2 = t->next->vertex;
 
-	(void)e; //this line avoids 'unused parameter' warnings. You can delete it as you fill in the function.
-    return std::nullopt;
+	FaceRef f1 = h->face;
+	FaceRef f2 = t->face;
+
+	// create a new vertex and connect it to v1, v2
+	VertexRef mid = emplace_vertex();
+	EdgeRef a = emplace_edge();
+	EdgeRef b = emplace_edge();
+	HalfedgeRef a1 = emplace_halfedge();
+	HalfedgeRef a2 = emplace_halfedge();
+	HalfedgeRef b1 = emplace_halfedge();
+	HalfedgeRef b2 = emplace_halfedge();
+	HalfedgeRef d1, d2;
+
+	mid->position = (v1->position + v2->position) / 2.0f;
+	mid->halfedge = a1;
+
+	// create new faces
+	FaceRef fa = emplace_face();
+	FaceRef fb;
+
+	// instantiate edges
+	a->halfedge = a1;
+	b->halfedge = b1;
+
+	// create new edges that will connect to mid ccw
+	EdgeRef c = emplace_edge();
+	EdgeRef d;
+	HalfedgeRef c1 = emplace_halfedge();
+	HalfedgeRef c2 = emplace_halfedge();
+	c->halfedge = c1;
+
+	// connect halfedges to new vertex
+	a1->set_tnvef(a2, h->next, mid, a, fa);
+	if (e->on_boundary()) {
+		if (e->halfedge->face->boundary) {
+			f_boundary = e->halfedge->face;
+		} else {
+			f_boundary = e->halfedge->twin->face;
+		}
+		a2->set_tnvef(a1, b2, v1, a, f2);
+		b2->set_tnvef(b1, t->next, mid, b, f_boundary);
+	} else {
+		fb = emplace_face();
+		d = emplace_edge();
+		d1 = emplace_halfedge();
+		d2 = emplace_halfedge();
+		d1->set_tnvef(d2, t->next->next, mid, d, f2);
+		d2->set_tnvef(d1, b2, t->next->next->vertex, d, fb);
+		d->halfedge = d1;
+		a2->set_tnvef(a1, d1, v1, a, f_boundary);
+		b2->set_tnvef(b1, t->next, mid, b, fb);
+	}
+	b1->set_tnvef(b2, c1, v2, b, f1);
+	
+	c1->set_tnvef(c2, h->next->next, mid, c, f1);
+	c2->set_tnvef(c1, a1, h->next->next->vertex, c, fa);
+
+	v1->halfedge = a2;
+	v2->halfedge = b1;
+
+	// adjust next halfedges for the adjacents of new edges
+	h->next->next = c2;
+	if (e->on_boundary()) {
+		h->next->twin->next = a2;
+	}
+
+	t->next->twin->next->twin->next = b1;
+
+	// iterate through to update faces
+	HalfedgeRef temp = b1;
+	do {
+		temp->face = f1;
+		temp = temp->next;
+	} while (temp != b1);
+	f1->halfedge = b1;
+
+	temp = a1;
+	do {
+		temp->face = fa;
+		temp = temp->next;
+	} while (temp != a1);
+	fa->halfedge = a1;
+
+	if (!e->on_boundary()){
+		h->next->twin->next->twin->next = a2;
+		t->next->next = d2;
+
+		temp = a2;
+		do {
+            temp->face = f2;
+            temp = temp->next;
+		} while (temp != a2);
+		f2->halfedge = a2;
+
+		temp = b2;
+		do {
+			temp->face = fb;
+			temp = temp->next;
+		} while (temp != b2);
+		fb->halfedge = b2;
+	} else {
+		f_boundary->halfedge = a2;
+	}
+
+	// remove old halfedges
+	erase_halfedge(h);
+	erase_halfedge(t);
+	erase_edge(e);
+
+    return mid;
 }
 
 
