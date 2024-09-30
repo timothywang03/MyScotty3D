@@ -221,7 +221,17 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::bisect_edge(EdgeRef e) {
  */
 std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::split_edge(EdgeRef e) {
 	// A2L2 (REQUIRED): split_edge
-	
+
+	// HalfedgeRef h = e->halfedge;
+	// HalfedgeRef t = h->twin;
+
+	// VertexRef v1 = h->next->vertex;
+	// VertexRef v2 = t->next->vertex;
+
+	// // create a new vertex and connect it to v1, v2
+	// VertexRef mid = emplace_vertex();
+	// HalfedgeRef mid1 = emplace_halfedge();
+
 	(void)e; //this line avoids 'unused parameter' warnings. You can delete it as you fill in the function.
     return std::nullopt;
 }
@@ -331,8 +341,47 @@ std::optional<Halfedge_Mesh::FaceRef> Halfedge_Mesh::extrude_face(FaceRef f) {
  */
 std::optional<Halfedge_Mesh::EdgeRef> Halfedge_Mesh::flip_edge(EdgeRef e) {
 	//A2L1: Flip Edge
+
+	if (e->on_boundary()) return std::nullopt;
+
+	HalfedgeRef h = e->halfedge;
+	HalfedgeRef t = h->twin;
+
+	// define vertices that are affected by the flip
+	VertexRef v1 = h->next->vertex;
+	VertexRef v2 = t->next->vertex;
+	VertexRef v3 = h->next->next->vertex;
+	VertexRef v4 = t->next->next->vertex;
+
+	// check if the flip would add duplicate halfedge
+	if (h->next->next == t->next->next->twin) return std::nullopt;
+
+	// define new faces with the new halfedges
+	FaceRef f1 = h->face;
+	FaceRef f2 = t->face;
+
+	// perform the flip operation
+	v1->halfedge = h->next;
+	v2->halfedge = t->next;
+	f1->halfedge = h;
+	f2->halfedge = t;
+
+	t->vertex = v3;
+	h->vertex = v4;
+
+	t->next->twin->next->twin->next = t->next;
+	t->next->twin->next->twin->next->face = f1;
+	HalfedgeRef temp = t->next->next;
+	t->next->next = h;
+	t->next = temp;
+
+	h->next->twin->next->twin->next = h->next;
+	h->next->twin->next->twin->next->face = f2;
+	temp = h->next->next;
+	h->next->next = t;
+	h->next = temp;
 	
-    return std::nullopt;
+	return e;
 }
 
 
