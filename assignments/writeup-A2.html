@@ -21,6 +21,9 @@ You do not need any screenshots for this task.
 **What edge cases did you handle?**
 
 *  Answer here:
+1. I case on whether the edge we're trying to flip a boundary edge, and I handle it by returning nullopt.
+2. I case on whether the edge's resultant flip already has an edge, and I handle it by returning nullopt. 
+3. I case on whether the edge's flip would create a vertex with degree one which is non-manifold, and I handle it by returning nullopt.
 
 Your completion will be graded based on the reference `test.a2.l1.cpp` file and 
 checking that the operation works in the GUI.

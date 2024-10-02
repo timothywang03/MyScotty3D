@@ -237,6 +237,8 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::split_edge(EdgeRef e) {
 	VertexRef mid = emplace_vertex();
 	EdgeRef a = emplace_edge();
 	EdgeRef b = emplace_edge();
+	a->sharp = e->sharp;
+	b->sharp = e->sharp;
 	HalfedgeRef a1 = emplace_halfedge();
 	HalfedgeRef a2 = emplace_halfedge();
 	HalfedgeRef b1 = emplace_halfedge();
@@ -244,6 +246,9 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::split_edge(EdgeRef e) {
 	HalfedgeRef d1, d2;
 
 	mid->position = (v1->position + v2->position) / 2.0f;
+	interpolate_data({v1, v2}, mid);
+	interpolate_data({h, h->next}, a1);
+	interpolate_data({t, t->next}, b2);
 	mid->halfedge = a1;
 
 	// create new faces
@@ -297,6 +302,10 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::split_edge(EdgeRef e) {
 	}
 
 	t->next->twin->next->twin->next = b1;
+
+	std::cout << h->id << " " << t->id << std::endl;
+	std::cout << describe() << std::endl;
+	std::cout << a2->id << " " << b1->id << std::endl;
 
 	// iterate through to update faces
 	HalfedgeRef temp = b1;
@@ -459,6 +468,9 @@ std::optional<Halfedge_Mesh::EdgeRef> Halfedge_Mesh::flip_edge(EdgeRef e) {
 	VertexRef v3 = h->next->next->vertex;
 	VertexRef v4 = t->next->next->vertex;
 
+	// if v1 or v2 are degree 2, return nullopt
+	if (v1->degree() == 2 || v2->degree() == 2) return std::nullopt;
+
 	// check if the flip would add duplicate halfedge
 	if (h->next->next == t->next->next->twin) return std::nullopt;
 
@@ -547,8 +559,117 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::collapse_edge(EdgeRef e) 
 
 	//Reminder: use interpolate_data() to merge corner_uv / corner_normal data on halfedges
 	// (also works for bone_weights data on vertices!)
+
+	// if any of the vertices neighboring any of the collapsed edge vertices have degree 2, then return nullopt
+
+	HalfedgeRef h = e->halfedge;
+	HalfedgeRef t = h->twin;
+
+	std::cout << "h: " << h->id << " " << "t: " << t->id << std::endl;
+
+	VertexRef v1 = h->next->vertex;
+	VertexRef v2 = t->next->vertex;
+	int v1_degree = v1->degree();
+	int v2_degree = v2->degree();
+
+	// creates a new vertex in between v1 and v2
+	VertexRef x = emplace_vertex();
+	x->position = (v1->position + v2->position) / 2.0f;
+	x->halfedge = h->next;
+	interpolate_data({v1, v2}, x);
+
+	// change halfedge references
+	h->next->vertex = x;
+	t->next->vertex = x;	
+
+	bool hflag = false, tflag = false;
+
+	HalfedgeRef temp = h->next->next->twin->next;
+	HalfedgeRef redundant = h->next->next;
+	if (h->next->next->next == h) {
+		h->next->twin->vertex->halfedge = h->next->twin;
+		erase_edge(redundant->edge);
+		erase_halfedge(redundant->twin);
+		erase_halfedge(redundant);
+		h->next->next = temp;
+
+		temp = t;
+		for (int i = 0; i < h->next->vertex->degree() - 2; i++) {
+			temp = temp->next->twin;
+		}
+		temp->next = h->next;
+		erase_face(h->face);
+		erase_face(h->next->next->face);
+		
+		// delete two faces and iterate through to make new one
+		FaceRef joined_face = emplace_face();
+		temp = h->next;
+		do {
+			temp->face = joined_face;
+			temp = temp->next;
+		} while (temp != h->next);
+		joined_face->halfedge = h->next;
+		hflag = true;
+	}
+
+	temp = t->next->next->twin->next;
+	redundant = h->next->next;
+	if (t->next->next->next == t) {
+		t->next->twin->vertex->halfedge = t->next->twin;
+		erase_edge(redundant->edge);
+		erase_halfedge(redundant->twin);
+		erase_halfedge(redundant);
+		t->next->next = temp;
+
+		temp = h;
+		for (int i = 0; i < t->next->vertex->degree() - 2; i++) {
+			temp = temp->next->twin;
+		}
+		temp->next = t->next;
+		erase_face(t->face);
+		erase_face(t->next->next->face);
+
+		// delete two faces and iterate through to make new one
+		FaceRef joined_face = emplace_face();
+		temp = t->next;
+		do {
+			temp->face = joined_face;
+			temp = temp->next;
+		} while (temp != t->next);
+		joined_face->halfedge = t->next;
+		tflag = true;
+	}
+
+	if (!tflag) {
+		temp = h;
+		for (int i = 0; i < v1_degree - 1; i++) {
+			temp = temp->next->twin;
+			temp->twin->vertex = x;
+		}
+		temp->next = t->next;
+	}
+
+	if (!hflag) {
+		temp = t;
+		for (int i = 0; i < v2_degree - 1; i++) {
+			temp = temp->next->twin;
+			std::cout << temp->id << std::endl;
+			temp->twin->vertex = x;
+		}
+		std::cout << temp->id << std::endl;
+		temp->next = h->next;
+	}
+
+	h->face->halfedge = h->next;
+	t->face->halfedge = t->next;
+
+	erase_vertex(v1);
+	erase_vertex(v2);
+	erase_halfedge(h);
+	erase_halfedge(t);
+	erase_edge(e);
 	
-    return std::nullopt;
+    return x;
 }
 
 /*
