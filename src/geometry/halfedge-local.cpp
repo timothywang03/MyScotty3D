@@ -303,10 +303,6 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::split_edge(EdgeRef e) {
 
 	t->next->twin->next->twin->next = b1;
 
-	std::cout << h->id << " " << t->id << std::endl;
-	std::cout << describe() << std::endl;
-	std::cout << a2->id << " " << b1->id << std::endl;
-
 	// iterate through to update faces
 	HalfedgeRef temp = b1;
 	do {
@@ -439,8 +435,97 @@ std::optional<Halfedge_Mesh::FaceRef> Halfedge_Mesh::extrude_face(FaceRef f) {
 	// Reminder: This function does not update the vertex positions.
 	// Remember to also fill in extrude_helper (A2L4h)
 
-	(void)f;
-    return std::nullopt;
+	// create a new face that is a duplicate version of the input face
+	// FaceRef f_new = emplace_face();
+	FaceRef f_boundary = f->halfedge->face;
+	if (!f_boundary->boundary) {
+		f_boundary = f->halfedge->twin->face;
+	}
+
+	HalfedgeRef h = f->halfedge;
+	HalfedgeRef t = h->twin;
+
+	std::cout << h->id << " " << t->id << std::endl;
+
+	// create new points for the face
+	std::vector<VertexRef> old_vertices;
+	std::vector<VertexRef> new_vertices;
+	HalfedgeRef temp = h;
+	do {
+		VertexRef v = emplace_vertex();
+		v->position = temp->vertex->position;
+		old_vertices.push_back(temp->vertex);
+		new_vertices.push_back(v);
+		temp = temp->next;
+	} while (temp != h);
+
+	// create new halfedges and edges for the face itself
+	for (int i = 0; i < new_vertices.size(); i++) {
+		HalfedgeRef h_i = emplace_halfedge();
+		HalfedgeRef t_i = emplace_halfedge();
+		EdgeRef e = emplace_edge();
+		e->halfedge = h_i;
+		h_i->edge = e;
+		t_i->edge = e;
+		h_i->twin = t_i;
+		t_i->twin = h_i;
+		h_i->vertex = new_vertices[i];
+		t_i->vertex = new_vertices[(i + 1) % new_vertices.size()];
+		new_vertices[i]->halfedge = h_i;
+		h_i->face = f;
+		t_i->face = f_boundary;
+	}
+
+	std::vector<HalfedgeRef> outer_edges;
+	// connect the new halfedges to each other
+	for (int i = 0; i < new_vertices.size(); i++) {
+		HalfedgeRef h_i = new_vertices[i]->halfedge;
+		h_i->next = new_vertices[(i + 1) % new_vertices.size()]->halfedge;
+		outer_edges.push_back(h_i->twin);
+	}
+
+	f->halfedge = new_vertices[0]->halfedge;
+
+	std::vector<HalfedgeRef> outer_joints;
+	std::vector<HalfedgeRef> inner_joints;
+
+	// connect all the vertices from the new face to the old face with halfedges
+	for (int i = 0; i < new_vertices.size(); i++) {
+		EdgeRef e = emplace_edge();
+		HalfedgeRef h_i = emplace_halfedge();
+		HalfedgeRef t_i = emplace_halfedge();
+		e->halfedge = h_i;
+		h_i->edge = e;
+		t_i->edge = e;
+		h_i->twin = t_i;
+		t_i->twin = h_i;
+		h_i->vertex = old_vertices[i];
+		t_i->vertex = new_vertices[i];
+		h_i->face = f_boundary;
+		t_i->face = f_boundary;
+		outer_joints.push_back(h_i);
+		inner_joints.push_back(t_i);
+	}
+
+	// set next pointers for the new halfedges
+	for (int i = 0; i < new_vertices.size(); i++) {
+		outer_joints[i]->next = outer_edges[(i - 1) % new_vertices.size()];
+		outer_edges[i]->next = inner_joints[i];
+		inner_joints[i]->next = old_vertices[i]->halfedge;
+		old_vertices[i]->halfedge->next = outer_joints[(i + 1) % new_vertices.size()];
+	}
+
+	// create new faces with the newly connected halfedges
+	for (int i = 0; i < new_vertices.size(); i++) {
+		FaceRef f_ = emplace_face();
+		f_->halfedge = outer_joints[i];
+		inner_joints[(i - 1) % new_vertices.size()]->face = f_;
+		old_vertices[(i - 1) % new_vertices.size()]->halfedge->face = f_;
+		outer_edges[(i - 1) % new_vertices.size()]->face = f_;
+		outer_joints[i]->face = f_;
+	}
+
+	return f;
 }
 
 /*
@@ -565,8 +650,6 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::collapse_edge(EdgeRef e) 
 	HalfedgeRef h = e->halfedge;
 	HalfedgeRef t = h->twin;
 
-	std::cout << "h: " << h->id << " " << "t: " << t->id << std::endl;
-
 	VertexRef v1 = h->next->vertex;
 	VertexRef v2 = t->next->vertex;
 	int v1_degree = v1->degree();
@@ -653,10 +736,8 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::collapse_edge(EdgeRef e) 
 		temp = t;
 		for (int i = 0; i < v2_degree - 1; i++) {
 			temp = temp->next->twin;
-			std::cout << temp->id << std::endl;
 			temp->twin->vertex = x;
 		}
-		std::cout << temp->id << std::endl;
 		temp->next = h->next;
 	}
 
@@ -760,6 +841,13 @@ void Halfedge_Mesh::extrude_positions(FaceRef face, Vec3 move, float shrink) {
 	// use mesh navigation to get starting positions from the surrounding faces,
 	// compute the centroid from these positions + use to shrink,
 	// offset by move
-	
-}
 
+	HalfedgeRef h = face->halfedge;
+	Vec3 center = face->center();
+	HalfedgeRef temp = h;
+	do {
+		temp->vertex->position = temp->vertex->position * (1.0f - shrink) + center * shrink;
+		temp->vertex->position = temp->vertex->position + move;
+		temp = temp->next;
+	} while (temp != h);
+}
