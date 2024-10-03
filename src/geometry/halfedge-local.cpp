@@ -677,7 +677,7 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::collapse_edge(EdgeRef e) 
 		h->next->next = temp;
 
 		temp = t;
-		for (int i = 0; i < h->next->vertex->degree() - 2; i++) {
+		for (uint32_t i = 0; i < h->next->vertex->degree() - 2; i++) {
 			temp = temp->next->twin;
 		}
 		temp->next = h->next;
@@ -705,7 +705,7 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::collapse_edge(EdgeRef e) 
 		t->next->next = temp;
 
 		temp = h;
-		for (int i = 0; i < t->next->vertex->degree() - 2; i++) {
+		for (uint32_t i = 0; i < t->next->vertex->degree() - 2; i++) {
 			temp = temp->next->twin;
 		}
 		temp->next = t->next;
