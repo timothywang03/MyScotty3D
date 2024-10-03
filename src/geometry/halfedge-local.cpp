@@ -460,7 +460,7 @@ std::optional<Halfedge_Mesh::FaceRef> Halfedge_Mesh::extrude_face(FaceRef f) {
 	} while (temp != h);
 
 	// create new halfedges and edges for the face itself
-	for (int i = 0; i < new_vertices.size(); i++) {
+	for (size_t i = 0; i < new_vertices.size(); i++) {
 		HalfedgeRef h_i = emplace_halfedge();
 		HalfedgeRef t_i = emplace_halfedge();
 		EdgeRef e = emplace_edge();
@@ -478,7 +478,7 @@ std::optional<Halfedge_Mesh::FaceRef> Halfedge_Mesh::extrude_face(FaceRef f) {
 
 	std::vector<HalfedgeRef> outer_edges;
 	// connect the new halfedges to each other
-	for (int i = 0; i < new_vertices.size(); i++) {
+	for (size_t i = 0; i < new_vertices.size(); i++) {
 		HalfedgeRef h_i = new_vertices[i]->halfedge;
 		h_i->next = new_vertices[(i + 1) % new_vertices.size()]->halfedge;
 		outer_edges.push_back(h_i->twin);
@@ -490,7 +490,7 @@ std::optional<Halfedge_Mesh::FaceRef> Halfedge_Mesh::extrude_face(FaceRef f) {
 	std::vector<HalfedgeRef> inner_joints;
 
 	// connect all the vertices from the new face to the old face with halfedges
-	for (int i = 0; i < new_vertices.size(); i++) {
+	for (size_t i = 0; i < new_vertices.size(); i++) {
 		EdgeRef e = emplace_edge();
 		HalfedgeRef h_i = emplace_halfedge();
 		HalfedgeRef t_i = emplace_halfedge();
@@ -508,7 +508,7 @@ std::optional<Halfedge_Mesh::FaceRef> Halfedge_Mesh::extrude_face(FaceRef f) {
 	}
 
 	// set next pointers for the new halfedges
-	for (int i = 0; i < new_vertices.size(); i++) {
+	for (size_t i = 0; i < new_vertices.size(); i++) {
 		outer_joints[i]->next = outer_edges[(i - 1) % new_vertices.size()];
 		outer_edges[i]->next = inner_joints[i];
 		inner_joints[i]->next = old_vertices[i]->halfedge;
@@ -516,7 +516,7 @@ std::optional<Halfedge_Mesh::FaceRef> Halfedge_Mesh::extrude_face(FaceRef f) {
 	}
 
 	// create new faces with the newly connected halfedges
-	for (int i = 0; i < new_vertices.size(); i++) {
+	for (size_t i = 0; i < new_vertices.size(); i++) {
 		FaceRef f_ = emplace_face();
 		f_->halfedge = outer_joints[i];
 		inner_joints[(i - 1) % new_vertices.size()]->face = f_;
