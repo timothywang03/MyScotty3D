@@ -85,17 +85,24 @@ void Halfedge_Mesh::linear_subdivide() {
 	//A2G2: linear subdivision
 
 	// For every vertex, assign its current position to vertex_positions[v]:
-
+	for (VertexCRef v = vertices.begin(); v != vertices.end(); ++v) {
+		vertex_positions[v] = v->position;
+	}
 	//(TODO)
 
     // For every edge, assign the midpoint of its adjacent vertices to edge_vertex_positions[e]:
 	// (you may wish to investigate the helper functions of Halfedge_Mesh::Edge)
-
+	for (EdgeCRef e = edges.begin(); e != edges.end(); ++e) {
+		edge_vertex_positions[e] = e->center();
+	}
 	//(TODO)
 
     // For every *non-boundary* face, assign the centroid (i.e., arithmetic mean) to face_vertex_positions[f]:
 	// (you may wish to investigate the helper functions of Halfedge_Mesh::Face)
-
+	for (FaceCRef f = faces.begin(); f != faces.end(); ++f) {
+		if (f->boundary) continue;
+		face_vertex_positions[f] = f->center();
+	}
 	//(TODO)
 
 
