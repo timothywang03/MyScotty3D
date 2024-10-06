@@ -13,7 +13,61 @@
  */
 void Halfedge_Mesh::triangulate() {
 	//A2G1: triangulation
-	
+	std::vector<FaceRef> faces_to_triangulate;
+	for (FaceRef f = faces.begin(); f != faces.end(); ++f) {
+		if (f->boundary) continue; //skip boundary faces
+		faces_to_triangulate.emplace_back(f);
+	}
+
+	for (FaceRef f : faces_to_triangulate) {
+		if (f->boundary) continue; //skip boundary faces
+
+		//get face halfedges:
+		std::vector< HalfedgeRef > face_halfedges;
+		int i = 0;
+		HalfedgeRef temp = f->halfedge;
+		do {
+			face_halfedges.emplace_back(temp);
+			temp = temp->next;
+			i++;
+		} while (temp != f->halfedge && i < 5);
+
+		HalfedgeRef b_h = f->halfedge;
+		std::vector< HalfedgeRef > new_halfedges;
+		new_halfedges.emplace_back(b_h);
+
+		//triangulate the face:
+		for (uint32_t i = 1; i < face_halfedges.size() - 2; i++) {
+			//add a new face:
+			FaceRef n = emplace_face(false);
+			n->halfedge = face_halfedges[i];
+			EdgeRef e = emplace_edge(false);
+			HalfedgeRef h = emplace_halfedge();
+			HalfedgeRef t = emplace_halfedge();
+
+			t->set_tnvef(h, face_halfedges[i]->next, b_h->vertex, e, f);
+			h->set_tnvef(t, new_halfedges.back(), face_halfedges[i]->twin->vertex, e, n);
+
+			temp = b_h;
+			for (int i = 0; i < face_halfedges.size() - 1; i++) {
+				temp = temp->next;
+			}
+			temp->next = t;
+			face_halfedges[i]->next = h;
+			e->halfedge = h;
+
+			// reassign the faces
+			temp = h;
+			do {
+				temp->face = n;
+				temp = temp->next;
+			} while (temp != h);
+
+			f->halfedge = t;
+
+			new_halfedges.emplace_back(t);
+		}
+	}
 }
 
 /*

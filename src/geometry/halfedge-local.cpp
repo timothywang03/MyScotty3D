@@ -613,6 +613,34 @@ std::optional<Halfedge_Mesh::FaceRef> Halfedge_Mesh::make_boundary(FaceRef face)
 std::optional<Halfedge_Mesh::FaceRef> Halfedge_Mesh::dissolve_vertex(VertexRef v) {
 	// A2Lx1 (OPTIONAL): Dissolve Vertex
 
+	// HalfedgeRef h = v->halfedge;
+	// FaceRef f_new = emplace_face();
+
+	// HalfedgeRef temp = h->twin->next;
+	// HalfedgeRef last = h;
+	// std::vector<HalfedgeRef> removals;
+
+	// do {
+	// 	removals.push_back(temp);
+	// 	temp->next->next = last->next;
+	// 	erase_face(temp->face);
+	// 	last = temp;
+	// } while (temp != h->twin->next);
+
+	// temp->next->next = last->next;
+
+	// for (size_t i = 0; i < removals.size(); i++) {
+	// 	erase_halfedge(removals[i]->twin);
+	// 	erase_halfedge(removals[i]);
+	// 	erase_edge(removals[i]->edge);
+	// }
+
+	// temp = h->next;
+	// do {
+	// 	temp->face = f_new;
+	// 	temp = temp->next;
+	// } while (temp != h->next);
+
     return std::nullopt;
 }
 
