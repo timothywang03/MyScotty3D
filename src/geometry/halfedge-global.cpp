@@ -133,15 +133,55 @@ void Halfedge_Mesh::catmark_subdivide() {
 	// https://en.wikipedia.org/wiki/Catmull%E2%80%93Clark_subdivision_surface
 
 	// Faces
+	for (FaceCRef f = faces.begin(); f != faces.end(); ++f) {
+		if (f->boundary) continue;
+		face_vertex_positions[f] = f->center();
+	}
 
 	// Edges
+	for (EdgeRef e = edges.begin(); e != edges.end(); ++e) {
+		Vec3 total = e->halfedge->vertex->position + e->halfedge->twin->vertex->position;
+		if (e->on_boundary()) {
+			edge_vertex_positions[e] = e->center();
+		} else {
+			total += e->halfedge->face->center() + e->halfedge->twin->face->center();
+			edge_vertex_positions[e] = total / 4.0f;
+		}
+	}
 
 	// Vertices
+	for (VertexCRef v = vertices.begin(); v != vertices.end(); v++) {
+		HalfedgeRef temp = v->halfedge;
+		const float degree = v->degree();
+		Vec3 face_total = Vec3();
+		Vec3 edge_total = Vec3();
+		const Vec3 vert_pos = v->position;
+		bool boundary_vertex = 0;
+		do {
+			edge_total += temp->edge->center();
+			if (!temp->face->boundary) {
+				face_total += temp->face->center();
+			} else {
+				boundary_vertex = 1;
+			}
+			temp = temp->twin;
+			temp = temp->next;
+		} while (temp != v->halfedge);
 
+		if (boundary_vertex) {
+			Vec3 c = v->halfedge->next->vertex->position;
+			Vec3 b = v->position;
+			Vec3 a = v->halfedge->next->next->next->vertex->position;
+			vertex_positions[v] = (a + 6 * b + c) / 8;
+		} else {
+			Vec3 Q = face_total / degree;
+			Vec3 R = 2 * edge_total / degree;
+			vertex_positions[v] = (Q + R + (degree - 3.0f) * vert_pos) / degree;
+		}
+	}
 	
 	//Now, use the provided helper function to actually perform the subdivision:
 	catmark_subdivide_helper(vertex_positions, edge_vertex_positions, face_vertex_positions);
-
 }
 
 /*
@@ -185,11 +225,37 @@ bool Halfedge_Mesh::loop_subdivide() {
 	// the Loop subdivision rule and store them in vertex_new_pos.
 	[[maybe_unused]]
 	std::unordered_map< VertexRef, Vec3 > vertex_new_pos;
+
+	for (VertexRef v = vertices.begin(); v != vertices.end(); v++) {
+		float n = v->degree();
+		float u = (n == 3) ? 3.0f / 16.0f : 3.0f / (8.0f * n);
+		Vec3 old_mult = (1.0f - n * u) * v->position;
+		
+		HalfedgeRef temp = v->halfedge;
+		do {
+			old_mult += u * temp->twin->vertex->position;
+			temp = temp->twin->next;
+		} while (temp != v->halfedge);
+
+		vertex_new_pos[v] = old_mult;
+	}
 	    
 	// Next, compute the subdivided vertex positions associated with edges, and
 	// store them in edge_new_pos:
 	[[maybe_unused]]
 	std::unordered_map< EdgeRef, Vec3 > edge_new_pos;
+
+	for (EdgeRef e = edges.begin(); e != edges.end(); e++) {
+		HalfedgeRef h = e->halfedge;
+		HalfedgeRef t = h->twin;
+		VertexRef v1 = h->vertex;
+		VertexRef v2 = t->vertex;
+		VertexRef v3 = h->next->next->vertex;
+		VertexRef v4 = t->next->next->vertex;
+
+		Vec3 edge_mult = 0.375f * (v1->position + v2->position) + 0.125f * (v3->position + v4->position);
+		edge_new_pos[e] = edge_mult;
+	}
     
 	// Next, we're going to split every edge in the mesh, in any order, placing
 	// the split vertex at the recorded edge_new_pos.
@@ -198,6 +264,22 @@ bool Halfedge_Mesh::loop_subdivide() {
 	// edges added by splitting. So store references to the new edges:
 	[[maybe_unused]]
 	std::vector< EdgeRef > new_edges;
+
+	std::vector<EdgeRef> old_edges;
+	for (EdgeRef e = edges.begin(); e != edges.end(); e++) {
+		old_edges.emplace_back(e);
+	}
+
+	int n = old_edges.size();
+	for (int i = 0; i < n; i++) {
+		EdgeRef e = old_edges[i];
+
+		std::optional<VertexRef> v = split_edge(e);
+		if (!v.has_value()) {
+			return false;
+		}
+		new_edges.emplace_back((*v)->halfedge->edge);
+	}
 
 	// Also note that in this loop, we only want to iterate over edges of the
 	// original mesh. Otherwise, we'll end up splitting edges that we just split
@@ -212,11 +294,20 @@ bool Halfedge_Mesh::loop_subdivide() {
 	};
 
     // Now flip any new edge that connects an old and new vertex.
+	for (EdgeRef e : new_edges) {
+		HalfedgeRef h = e->halfedge;
+		HalfedgeRef t = h->twin;
+		VertexRef v1 = h->vertex;
+		VertexRef v2 = t->vertex;
+		if (is_new(v1) != is_new(v2)) {
+			flip_edge(e);
+		}
+	}
     
     // Finally, copy new vertex positions into the Vertex::position.
-
-
-
+	for (auto& [v, pos] : vertex_new_pos) {
+		v->position = pos;
+	}
 
 	return true;
 }

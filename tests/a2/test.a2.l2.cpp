@@ -1,5 +1,6 @@
 #include "test.h"
 #include "geometry/halfedge.h"
+#include <iostream>
 
 static void expect_split(Halfedge_Mesh &mesh, Halfedge_Mesh::EdgeRef edge, Halfedge_Mesh const &after) {
 	if (auto ret = mesh.split_edge(edge)) {
@@ -143,6 +144,26 @@ Test test_a2_l2_split_edge_edge_square_diagonal(
 
       expect_split(mesh, edge, after);
     });
+
+// triangle case
+Test test_a2_l2_split_edge_edge_triangle("a2.l2.split_edge.triangle", []() {
+	Halfedge_Mesh mesh = Halfedge_Mesh::from_indexed_faces({
+		Vec3 (0.0f, 0.0f, 0.0f), Vec3(1.0f, 0.0f, 0.0f), Vec3(0.0f, 1.0f, 0.0f)}, {{1, 2, 0}});
+	Halfedge_Mesh::EdgeRef edge = mesh.halfedges.begin()->next->next->edge;
+
+	Halfedge_Mesh after = Halfedge_Mesh::from_indexed_faces({
+		Vec3(-1.0f, 1.1f, 0.0f), Vec3(1.1f, 1.0f, 0.0f),
+		                         Vec3(1.25f, 0.0f, 0.0f),  Vec3(2.2f, 0.0f, 0.0f),
+		Vec3(-1.3f,-0.7f, 0.0f), Vec3(1.4f, -1.0f, 0.0f)
+	}, {
+		{0, 4, 5}, 
+		{0, 5, 1}, 
+		{1, 5, 2}, 
+		{0, 1, 2}
+	});
+
+	expect_split(mesh, edge, after);
+});
 
 /*
 Edge CASE

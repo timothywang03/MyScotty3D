@@ -344,6 +344,8 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::split_edge(EdgeRef e) {
 	erase_halfedge(t);
 	erase_edge(e);
 
+	std::cout << describe() << std::endl;
+
     return mid;
 }
 
