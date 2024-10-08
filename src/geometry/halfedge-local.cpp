@@ -229,6 +229,8 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::split_edge(EdgeRef e) {
 
 	VertexRef v1 = h->next->vertex;
 	VertexRef v2 = t->next->vertex;
+	int v1_deg = v1->degree();
+	int v2_deg = v2->degree();
 
 	FaceRef f1 = h->face;
 	FaceRef f2 = t->face;
@@ -257,7 +259,7 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::split_edge(EdgeRef e) {
 
 	// instantiate edges
 	a->halfedge = a1;
-	b->halfedge = b1;
+	b->halfedge = b1;	
 
 	// create new edges that will connect to mid ccw
 	EdgeRef c = emplace_edge();
@@ -265,6 +267,7 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::split_edge(EdgeRef e) {
 	HalfedgeRef c1 = emplace_halfedge();
 	HalfedgeRef c2 = emplace_halfedge();
 	c->halfedge = c1;
+
 
 	// connect halfedges to new vertex
 	a1->set_tnvef(a2, h->next, mid, a, fa);
@@ -288,7 +291,6 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::split_edge(EdgeRef e) {
 		b2->set_tnvef(b1, t->next, mid, b, fb);
 	}
 	b1->set_tnvef(b2, c1, v2, b, f1);
-	
 	c1->set_tnvef(c2, h->next->next, mid, c, f1);
 	c2->set_tnvef(c1, a1, h->next->next->vertex, c, fa);
 
@@ -297,14 +299,24 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::split_edge(EdgeRef e) {
 
 	// adjust next halfedges for the adjacents of new edges
 	h->next->next = c2;
-	if (e->on_boundary()) {
-		h->next->twin->next = a2;
+	HalfedgeRef temp = h;
+	for (int i = 0; i < v1_deg - 1; i++) {
+		temp = temp->next->twin;
+	}
+	temp->next = a2;
+
+	temp = t;
+	for (int i = 0; i < v2_deg - 1; i++) {
+		temp = temp->next->twin;
+	}
+	temp->next = b1;
+
+	if (!e->on_boundary()) {
+		t->next->next = d2;
 	}
 
-	t->next->twin->next->twin->next = b1;
-
 	// iterate through to update faces
-	HalfedgeRef temp = b1;
+	temp = b1;
 	do {
 		temp->face = f1;
 		temp = temp->next;
@@ -319,9 +331,6 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::split_edge(EdgeRef e) {
 	fa->halfedge = a1;
 
 	if (!e->on_boundary()){
-		h->next->twin->next->twin->next = a2;
-		t->next->next = d2;
-
 		temp = a2;
 		do {
             temp->face = f2;
@@ -343,8 +352,6 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::split_edge(EdgeRef e) {
 	erase_halfedge(h);
 	erase_halfedge(t);
 	erase_edge(e);
-
-	std::cout << describe() << std::endl;
 
     return mid;
 }

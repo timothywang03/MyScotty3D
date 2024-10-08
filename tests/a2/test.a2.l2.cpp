@@ -146,23 +146,38 @@ Test test_a2_l2_split_edge_edge_square_diagonal(
     });
 
 // triangle case
+/*
+Edge CASE
+
+Initial mesh:
+1
+|\
+| \
+|  \
+0---2
+
+Split Edge on Edge: 1-2
+
+After mesh:
+1
+|\
+| \
+|  3
+| / \
+|/   \
+0-----2
+*/
+
 Test test_a2_l2_split_edge_edge_triangle("a2.l2.split_edge.triangle", []() {
 	Halfedge_Mesh mesh = Halfedge_Mesh::from_indexed_faces({
-		Vec3 (0.0f, 0.0f, 0.0f), Vec3(1.0f, 0.0f, 0.0f), Vec3(0.0f, 1.0f, 0.0f)}, {{1, 2, 0}});
+		Vec3 (0.0f, 0.0f, 0.0f), Vec3(0.0f, 1.0f, 0.0f), Vec3(1.0f, 0.0f, 0.0f)}, {{1, 0, 2}});
 	Halfedge_Mesh::EdgeRef edge = mesh.halfedges.begin()->next->next->edge;
 
 	Halfedge_Mesh after = Halfedge_Mesh::from_indexed_faces({
-		Vec3(-1.0f, 1.1f, 0.0f), Vec3(1.1f, 1.0f, 0.0f),
-		                         Vec3(1.25f, 0.0f, 0.0f),  Vec3(2.2f, 0.0f, 0.0f),
-		Vec3(-1.3f,-0.7f, 0.0f), Vec3(1.4f, -1.0f, 0.0f)
-	}, {
-		{0, 4, 5}, 
-		{0, 5, 1}, 
-		{1, 5, 2}, 
-		{0, 1, 2}
-	});
+		Vec3 (0.0f, 0.0f, 0.0f), Vec3(0.0f, 1.0f, 0.0f), Vec3(1.0f, 0.0f, 0.0f), Vec3(0.5f, 0.5f, 0.0f)}, 
+		{{1, 0, 3}, {3, 0, 2}});
 
-	expect_split(mesh, edge, after);
+	expect_split(mesh, edge, mesh);
 });
 
 /*
@@ -188,17 +203,17 @@ After mesh:
 |  |
 2--3
 */
-// Test test_a2_l2_split_edge_edge_square("a2.l2.split_edge.square", []() {
-//   Halfedge_Mesh mesh = Halfedge_Mesh::from_indexed_faces(
-//       {Vec3(0.0f, 0.0f, 0.0f), Vec3(2.0f, 0.0f, 0.0f), Vec3(0.0f, 4.0f, 0.0f),
-//        Vec3(2.0f, 4.0f, 0.0f)},
-//       {{0, 2, 3, 1}});
-//   Halfedge_Mesh::EdgeRef edge = mesh.halfedges.begin()->next->next->edge;
+Test test_a2_l2_split_edge_edge_square("a2.l2.split_edge.square", []() {
+  Halfedge_Mesh mesh = Halfedge_Mesh::from_indexed_faces(
+      {Vec3(0.0f, 0.0f, 0.0f), Vec3(2.0f, 0.0f, 0.0f), Vec3(0.0f, 4.0f, 0.0f),
+       Vec3(2.0f, 4.0f, 0.0f)},
+      {{0, 2, 3, 1}});
+  Halfedge_Mesh::EdgeRef edge = mesh.halfedges.begin()->next->next->edge;
 
-//   Halfedge_Mesh after = Halfedge_Mesh::from_indexed_faces(
-//       {Vec3(0.0f, 0.0f, 0.0f), Vec3(2.0f, 0.0f, 0.0f), Vec3(0.0f, 4.0f, 0.0f),
-//        Vec3(2.0f, 4.0f, 0.0f), Vec3(2.0f, 2.0f, 0.0f)},
-//       {{0, 4, 1}, {0, 2, 3, 4}});
+  Halfedge_Mesh after = Halfedge_Mesh::from_indexed_faces(
+      {Vec3(0.0f, 0.0f, 0.0f), Vec3(2.0f, 0.0f, 0.0f), Vec3(0.0f, 4.0f, 0.0f),
+       Vec3(2.0f, 4.0f, 0.0f), Vec3(2.0f, 2.0f, 0.0f)},
+      {{0, 4, 1}, {0, 2, 3, 4}});
 
-//   expect_split(mesh, edge, after);
-// });
+  expect_split(mesh, edge, after);
+});
