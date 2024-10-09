@@ -36,6 +36,7 @@ You do not need any screenshots for this task.
 
 *  Answer here:
 1. I case on whether the edge we're trying to split is a boundary edge, and I handle it by only adding a subdivided face once.
+2. I case on whether the edge we're trying to split is a bounday edge who's next next is itself
 
 Your completion will be graded based on the reference `test.a2.l2.cpp` file and 
 checking that the operation works in the GUI.
@@ -47,6 +48,7 @@ You do not need any screenshots for this task.
 **What edge cases did you handle?**
 
 *  Answer here: 
+1. I case on whether the edge we're trying to collapse will make any other edges redundant, and I remove those edges.
 
 Your completion will be graded based on the reference `test.a2.l3.cpp` file and 
 checking that the operation works in the GUI.
@@ -96,9 +98,11 @@ checking that the operation works in the GUI.
 
 Image of model in the GUI:
 <div class="twentytwenty-container">
-    <img src="A2-writeup/reference/model-image.png" alt="Your creation">
+    <img src="A2-writeup/reference/ballz.png" alt="Your creation">
 </div>
 Explanation of what it is and how you made it:
+
+This is a picture of three layers of catmull clark subdivision on a cube.
 
 Any free model sources you need to credit?
 
