@@ -581,14 +581,22 @@ std::optional<Halfedge_Mesh::EdgeRef> Halfedge_Mesh::flip_edge(EdgeRef e) {
 	t->vertex = v3;
 	h->vertex = v4;
 
-	t->next->twin->next->twin->next = t->next;
-	t->next->twin->next->twin->next->face = f1;
-	HalfedgeRef temp = t->next->next;
+	HalfedgeRef temp = h;
+	for (int i = 0; i < h->face->degree() - 1; i++) {
+		temp = temp->next;
+	}
+	temp->next = t->next;
+	t->next->face = f1;
+	temp = t->next->next;
 	t->next->next = h;
 	t->next = temp;
 
-	h->next->twin->next->twin->next = h->next;
-	h->next->twin->next->twin->next->face = f2;
+	temp = t;
+	for (int i = 0; i < t->face->degree() - 1; i++) {
+		temp = temp->next;
+	}
+	temp->next = h->next;
+	h->next->face = f2;
 	temp = h->next->next;
 	h->next->next = t;
 	h->next = temp;

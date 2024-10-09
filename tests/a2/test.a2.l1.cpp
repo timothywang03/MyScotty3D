@@ -318,3 +318,25 @@ Test test_a2_l1_flip_edge_edge_reject("a2.l1.flip_edge.edge.reject", []() {
     throw Test::error("flip_edge should not work as it rejects.");
   }
 });
+
+/*
+Initial
+1
+|\
+| \
+4\ \
+| \ \
+|  \ \
+0--3--2
+*/
+
+// Test test_a2_l2_flip_edge_triangle("a2.l1.flip_edge.edge.triangle", []() {
+//     Halfedge_Mesh after = Halfedge_Mesh::from_indexed_faces(
+//         {Vec3(0.0f, 0.0f, 0.0f), Vec3(0.0f, 1.0f, 0.0f), Vec3(1.0f, 0.0f, 0.0f),
+//         Vec3(0.5f, 0.5f, 0.0f), Vec3()},
+//         {{1, 0, 3}, {1, 3, 2}});
+
+//     Halfedge_Mesh::EdgeRef edge = mesh.halfedges.begin()->next->edge;
+
+    
+// })

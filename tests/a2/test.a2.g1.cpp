@@ -122,3 +122,37 @@ Test test_a2_g1_triangulate_basic_quad_cube("a2.g1.triangulate.basic.quad_cube",
 	// Many different implementations of triangulating, so just checks that all the faces are triangles and some other misc things
 	expect_triangulate(mesh);
 });
+
+/*
+EDGE CASE
+
+Initial mesh:
+0---1
+|  /|
+| 2 |
+|/  |
+3---4
+
+Flip Edge on Edge: 2-1
+
+After mesh:
+0---1
+|  /|
+| 2 |
+|/  |
+3---4
+*/
+Test test_a2_l1_flip_edge_edge_reject2("a2.l1.flip_edge.edge.reject2", []() {
+  Halfedge_Mesh mesh = Halfedge_Mesh::from_indexed_faces(
+      {Vec3(-1.0f, 1.1f, 0.0f), Vec3(1.1f, 1.0f, 0.0f), Vec3(0.0f, 0.0f, 0.0f),
+       Vec3(-1.3f, -0.7f, 0.0f), Vec3(1.4f, -1.0f, 0.0f)},
+      {{2, 1, 0, 3}, {3, 4, 1, 2}});
+  Halfedge_Mesh::EdgeRef edge = mesh.halfedges.begin()->edge;
+
+  if (mesh.flip_edge(edge)) {
+    if (auto msg = mesh.validate()) {
+      throw Test::error("Invalid mesh: " + msg.value().second);
+    }
+    throw Test::error("flip_edge should not work as it rejects.");
+  }
+});

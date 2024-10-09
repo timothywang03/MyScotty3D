@@ -223,21 +223,34 @@ bool Halfedge_Mesh::loop_subdivide() {
     
 	// Compute new positions for all the vertices in the input mesh using
 	// the Loop subdivision rule and store them in vertex_new_pos.
+
 	[[maybe_unused]]
 	std::unordered_map< VertexRef, Vec3 > vertex_new_pos;
 
 	for (VertexRef v = vertices.begin(); v != vertices.end(); v++) {
 		float n = v->degree();
-		float u = (n == 3) ? 3.0f / 16.0f : 3.0f / (8.0f * n);
-		Vec3 old_mult = (1.0f - n * u) * v->position;
-		
-		HalfedgeRef temp = v->halfedge;
-		do {
-			old_mult += u * temp->twin->vertex->position;
-			temp = temp->twin->next;
-		} while (temp != v->halfedge);
+		Vec3 old_mult = Vec3();
+		if (v->on_boundary()) {
+			HalfedgeRef temp = v->halfedge;
+			do {
+				if (temp->twin->edge->on_boundary()) {
+					old_mult += temp->twin->vertex->position;
+				}
+				temp = temp->twin->next;
+			} while (temp != v->halfedge);
+			vertex_new_pos[v] = 0.75f * v->position + 0.125f * old_mult;
 
-		vertex_new_pos[v] = old_mult;
+		} else {
+			float u = (n == 3) ? 3.0f / 16.0f : 3.0f / (8.0f * n);
+			old_mult = (1.0f - n * u) * v->position;
+			HalfedgeRef temp = v->halfedge;
+			do {
+				old_mult += u * temp->twin->vertex->position;
+				temp = temp->twin->next;
+			} while (temp != v->halfedge);
+
+			vertex_new_pos[v] = old_mult;
+		}
 	}
 	    
 	// Next, compute the subdivided vertex positions associated with edges, and
@@ -253,8 +266,12 @@ bool Halfedge_Mesh::loop_subdivide() {
 		VertexRef v3 = h->next->next->vertex;
 		VertexRef v4 = t->next->next->vertex;
 
-		Vec3 edge_mult = 0.375f * (v1->position + v2->position) + 0.125f * (v3->position + v4->position);
-		edge_new_pos[e] = edge_mult;
+		if (e->on_boundary()) {
+			edge_new_pos[e] = e->center();
+		} else {
+			Vec3 edge_mult = 0.375f * (v1->position + v2->position) + 0.125f * (v3->position + v4->position);
+			edge_new_pos[e] = edge_mult;
+		}
 	}
     
 	// Next, we're going to split every edge in the mesh, in any order, placing
@@ -265,20 +282,28 @@ bool Halfedge_Mesh::loop_subdivide() {
 	[[maybe_unused]]
 	std::vector< EdgeRef > new_edges;
 
-	std::vector<EdgeRef> old_edges;
-	for (EdgeRef e = edges.begin(); e != edges.end(); e++) {
-		old_edges.emplace_back(e);
-	}
+	EdgeRef e_start = edges.begin();
+	size_t n = edges.size();
+	for (size_t i = 0; i < n; i++) {
+		EdgeRef e = e_start;
+		e++;
 
-	int n = old_edges.size();
-	for (int i = 0; i < n; i++) {
-		EdgeRef e = old_edges[i];
-
-		std::optional<VertexRef> v = split_edge(e);
-		if (!v.has_value()) {
-			return false;
-		}
-		new_edges.emplace_back((*v)->halfedge->edge);
+		VertexRef v, v1, v2;
+		v1 = e_start->halfedge->vertex;
+		v2 = e_start->halfedge->twin->vertex;
+		Vec3 pos = edge_new_pos[e_start];
+		v = *split_edge(e_start);
+		v->position = pos;
+		HalfedgeRef h = v->halfedge;
+		do {
+			HalfedgeRef twin = h->twin;
+			VertexRef v_twin = twin->vertex;
+			if (v_twin != v1 && v_twin != v2) {
+				new_edges.emplace_back(h->edge);
+			}	
+			h = twin->next;
+		} while (h != v->halfedge);
+		e_start = e;
 	}
 
 	// Also note that in this loop, we only want to iterate over edges of the
@@ -308,7 +333,6 @@ bool Halfedge_Mesh::loop_subdivide() {
 	for (auto& [v, pos] : vertex_new_pos) {
 		v->position = pos;
 	}
-
 	return true;
 }
 
