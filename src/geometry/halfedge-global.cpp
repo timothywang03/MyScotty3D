@@ -49,7 +49,7 @@ void Halfedge_Mesh::triangulate() {
 			h->set_tnvef(t, new_halfedges.back(), face_halfedges[i]->twin->vertex, e, n);
 
 			temp = b_h;
-			for (int i = 0; i < face_halfedges.size() - 1; i++) {
+			for (size_t i = 0; i < face_halfedges.size() - 1; i++) {
 				temp = temp->next;
 			}
 			temp->next = t;
