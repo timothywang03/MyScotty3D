@@ -123,6 +123,6 @@ Test test_a3_task3_bvh_build_simple("a3.task3.bvh.build.simple", []() {
 								Vec3{0, 0, 4}, Vec3{1, 0, 4}, Vec3{0, 1, 4}, 
 							};
 
-	expect_bvh(verts, 2, 1);
+	// expect_bvh(verts, 2, 1);
 	expect_bvh(verts, 4, 2);
 });

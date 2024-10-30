@@ -1,6 +1,7 @@
 
 #include "shape.h"
 #include "../geometry/util.h"
+#include <iostream>
 
 namespace Shapes {
 
@@ -30,14 +31,64 @@ PT::Trace Sphere::hit(Ray ray) const {
     // but only the _later_ one is within ray.dist_bounds, you should
     // return that one!
 
-    PT::Trace ret;
-    ret.origin = ray.point;
-    ret.hit = false;       // was there an intersection?
-    ret.distance = 0.0f;   // at what distance did the intersection occur?
-    ret.position = Vec3{}; // where was the intersection?
-    ret.normal = Vec3{};   // what was the surface normal at the intersection?
+	Vec3 origin = ray.point;
+	Vec3 dir = ray.dir;
+
+	float discriminant = 4 * pow(dot(origin, dir), 2) - 4 * (pow(dir.norm(), 2) * (pow(origin.norm(), 2) - pow(radius, 2)));
+
+	PT::Trace ret;
+	ret.origin = ray.point;
+	ret.hit = false;       // was there an intersection?
+	ret.distance = 0.0f;   // at what distance did the intersection occur?
+	ret.position = Vec3{}; // where was the intersection?
+	ret.normal = Vec3{};   // what was the surface normal at the intersection?
 	ret.uv = Vec2{}; 	   // what was the uv coordinates at the intersection? (you may find Sphere::uv to be useful)
-    return ret;
+
+	if (discriminant > 0) {
+		float t1 = (-2 * dot(origin, dir) - sqrt(discriminant)) / (2 * pow(dir.norm(), 2));
+		float t2 = (-2 * dot(origin, dir) + sqrt(discriminant)) / (2 * pow(dir.norm(), 2));
+
+		float dist1 = (t1 * dir).norm();
+		float dist2 = (t2 * dir).norm();
+
+		if (dist1 > dist2) {
+			std::swap(t1, t2);
+		}
+
+		if (t1 >= ray.dist_bounds[0] && t1 <= ray.dist_bounds[1]) {
+			ret.hit = true;
+			ret.position = origin + t1 * dir;
+			ret.distance = (ret.position - origin).norm();
+			ret.normal = (ret.position - Vec3{0, 0, 0}).unit();
+			ret.uv = uv(ret.normal);
+			return ret;
+		} else if (t2 >= ray.dist_bounds[0] && t2 <= ray.dist_bounds[1]) {
+			ret.hit = true;
+			ret.position = origin + t2 * dir;
+			ret.distance = (ret.position - origin).norm();
+			ret.normal = (ret.position - Vec3{0, 0, 0}).unit();
+			ret.uv = uv(ret.normal);
+			return ret;
+		} else {
+			return ret;
+		}
+
+		return ret;
+	} else if (discriminant == 0) {
+		float t = -2 * dot(origin, dir) / (2 * pow(dir.norm(), 2));
+		if (t > ray.dist_bounds.y || t < ray.dist_bounds.x) {
+			return ret;
+		} else {
+			ret.hit = true;
+			ret.position = origin + t * dir;
+			ret.distance = (ret.position - origin).norm();
+			ret.normal = (ret.position - Vec3{0, 0, 0}).unit();
+			ret.uv = uv(ret.normal);
+			return ret;
+		}
+	} else {
+		return ret;
+	}
 }
 
 Vec3 Sphere::sample(RNG &rng, Vec3 from) const {

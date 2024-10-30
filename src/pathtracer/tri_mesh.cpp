@@ -3,6 +3,7 @@
 
 #include "samplers.h"
 #include "tri_mesh.h"
+#include <iostream>
 
 namespace PT {
 
@@ -15,7 +16,29 @@ BBox Triangle::bbox() const {
     // Beware of flat/zero-volume boxes! You may need to
     // account for that here, or later on in BBox::hit.
 
+	float min_x = std::min(vertex_list[v0].position.x, std::min(vertex_list[v1].position.x, vertex_list[v2].position.x));
+	float min_y = std::min(vertex_list[v0].position.y, std::min(vertex_list[v1].position.y, vertex_list[v2].position.y));
+	float max_x = std::max(vertex_list[v0].position.x, std::max(vertex_list[v1].position.x, vertex_list[v2].position.x));
+	float max_y = std::max(vertex_list[v0].position.y, std::max(vertex_list[v1].position.y, vertex_list[v2].position.y));
+	float min_z = std::min(vertex_list[v0].position.z, std::min(vertex_list[v1].position.z, vertex_list[v2].position.z));
+	float max_z = std::max(vertex_list[v0].position.z, std::max(vertex_list[v1].position.z, vertex_list[v2].position.z));
+
+	if (max_x - min_x < 0.001) {
+		max_x += 0.001;
+	}
+
+	if (max_y - min_y < 0.001) {
+		max_y += 0.001;
+	}
+
+	if (max_z - min_z < 0.001) {
+		max_z += 0.001;
+	}
+
     BBox box;
+	box.min = Vec3{min_x, min_y, min_z};
+	box.max = Vec3{max_x, max_y, max_z};
+
     return box;
 }
 
@@ -32,6 +55,34 @@ Trace Triangle::hit(const Ray& ray) const {
 
     // TODO (PathTracer): Task 2
     // Intersect the ray with the triangle defined by the three vertices.
+
+	Vec3 s = ray.point - v_0.position;
+	Vec3 d = ray.dir;
+	Vec3 e1 = v_1.position - v_0.position;
+	Vec3 e2 = v_2.position - v_0.position;
+
+	if (dot(cross(e1, d), e2) == 0) {
+		return Trace();
+	}
+
+	Vec3 cram = (1 / (dot(cross(e1, d), e2))) * Vec3{-dot(cross(s, e2), d), dot(cross(e1, d), s), -dot(cross(s, e2), e1)};
+
+	float u = cram[0];
+	float v = cram[1];
+	float w = 1 - u - v;
+	Vec3 hit_pos = u * v_1.position + v * v_2.position + w * v_0.position;
+	float dist = (hit_pos - ray.point).norm();
+
+	if (cram[0] + cram[1] <= 1 && cram[0] >= 0 && cram[1] >= 0 && dist > ray.dist_bounds[0] && dist < ray.dist_bounds[1]) {
+		Trace ret;
+		ret.origin = ray.point;
+		ret.hit = true;
+		ret.distance = (hit_pos - ray.point).norm();
+		ret.position = hit_pos;
+		ret.normal = u * v_1.normal + v * v_2.normal + w * v_0.normal;
+		ret.uv = (1 - cram[0] - cram[1]) * v_0.uv + cram[0] * v_1.uv + cram[1] * v_2.uv;
+		return ret;
+	}
 
     Trace ret;
     ret.origin = ray.point;
