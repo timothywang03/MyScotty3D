@@ -61,10 +61,10 @@ void BVH<Primitive>::build(std::vector<Primitive>&& prims, size_t max_leaf_size)
             // create a bounding box for each primitive
             for (unsigned long i = start; i < end; i++) {
                 BBox left, right;
-                for (int j = start; j < i; j++) {
+                for (unsigned long j = start; j < i; j++) {
                     left.enclose(primitives[j].bbox());
                 }
-                for (int j = i; j < end; j++) {
+                for (unsigned long j = i; j < end; j++) {
                     right.enclose(primitives[j].bbox());
                 }
 
