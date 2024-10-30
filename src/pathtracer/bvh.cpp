@@ -150,13 +150,13 @@ template<typename Primitive> Trace BVH<Primitive>::hit(const Ray& ray) const {
 			}
 
 			if (hit_left) {
-				Trace left = traverse(ray, nodes[node.l]);
+				traverse(ray, nodes[node.l]);
 			} else if (hit_right) {
-				Trace right = traverse(ray, nodes[node.r]);
+				traverse(ray, nodes[node.r]);
 			}
 
 			if (hit_right && hit_left && cur_dist < best_distance) {
-				Trace right = traverse(ray, nodes[node.r]);
+				traverse(ray, nodes[node.r]);
 			}
 			return best;
 		}
