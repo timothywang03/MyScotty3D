@@ -86,40 +86,45 @@ struct BBox {
 		// [times.x,times.y], update times with the new intersection times.
 		// This means at least one of tmin and tmax must be within the range
 
-		float tmin = (min.x - ray.point.x) / ray.dir.x;
-		float tmax = (max.x - ray.point.x) / ray.dir.x;
+		float tmin = (min.x - ray.point.x) / ray.dir.x; 
+		float tmax = (max.x - ray.point.x) / ray.dir.x; 
 
-		if (tmin > tmax) std::swap(tmin, tmax);
+		if (tmin > tmax) std::swap(tmin, tmax); 
 
-		float tymin = (min.y - ray.point.y) / ray.dir.y;
-		float tymax = (max.y - ray.point.y) / ray.dir.y;
+		float tymin = (min.y - ray.point.y) / ray.dir.y; 
+		float tymax = (max.y - ray.point.y) / ray.dir.y; 
 
-		if (tymin > tymax) std::swap(tymin, tymax);
+		if (tymin > tymax) std::swap(tymin, tymax); 
 
-		if ((tmin > tymax) || (tymin > tmax)) return false;
+		if ((tmin > tymax) || (tymin > tmax)) 
+			return false; 
 
-		tmin = std::max(tmin, tymin);
-		tmax = std::min(tmax, tymax);
+		if (tymin > tmin) tmin = tymin; 
+		if (tymax < tmax) tmax = tymax; 
 
-		float tzmin = (min.z - ray.point.z) / ray.dir.z;
-		float tzmax = (max.z - ray.point.z) / ray.dir.z;
+		float tzmin = (min.z - ray.point.z) / ray.dir.z; 
+		float tzmax = (max.z - ray.point.z) / ray.dir.z; 
 
-		if (tzmin > tzmax) std::swap(tzmin, tzmax);
+		if (tzmin > tzmax) std::swap(tzmin, tzmax); 
 
-		if ((tmin > tzmax) || (tzmin > tmax)) return false;
+		if ((tmin > tzmax) || (tzmin > tmax)) 
+			return false; 
 
-		tmin = std::max(tmin, tzmin);
-		tmax = std::min(tmax, tzmax);
+		if (tzmin > tmin) tmin = tzmin; 
+		if (tzmax < tmax) tmax = tzmax; 
 
-		if (tmin > times.y || tmax < times.x) return false;
-
-		times.x = std::min(tmin, times.x);
-		times.y = std::max(tmax, times.y);
-
-		if (times.x < times.y) {
-			std::swap(times.x, times.y);
+		bool hit_time = false;
+		if (tmin > times.x && tmin < times.y) {
+			times.x = tmin;
+			hit_time = true;
 		}
-		return true;
+
+		if (tmax > times.x && tmax < times.y) {
+			times.y = tmax;
+			hit_time = true;
+		}
+
+		return hit_time; 
 	}
 
 	/// Get the eight corner points of the bounding box

@@ -5,7 +5,7 @@
 #include "tri_mesh.h"
 
 #include <stack>
-#include <functional>
+#include <functional>	
 #include <iostream>
 
 namespace PT {
@@ -108,57 +108,49 @@ template<typename Primitive> Trace BVH<Primitive>::hit(const Ray& ray) const {
 	Node root = nodes[root_idx];
 
 	// keep track globally of the best hit
+	float ray_traverse_ub = ray.dist_bounds.y;
 	Trace best = Trace();
+	// bool updated = false;
 	float best_distance = std::numeric_limits<float>::infinity();
 
 	// define a traversal that will return the closest intersection between ray and bounding box
-	std::function<Trace(const Ray&, Node)> traverse;
-	traverse = [&](const Ray& ray, Node node) -> Trace {
+	std::function<void(const Ray&, Node)> traverse;
+	traverse = [&](const Ray& ray, Node node) -> void {
 		if (node.is_leaf()) {
 			// base case: if it is a leaf node, iterate through all the primitives in the node
-			Trace closest = Trace();
 			for (size_t i = node.start; i < node.start + node.size; i++) {
 				Trace hit = primitives[i].hit(ray);
-				if (hit.hit && (!closest.hit || hit.distance < closest.distance)) {
-					closest = hit;
-				}
+				best = Trace::min(best, hit);
 			}
-			if (closest.hit && closest.distance < best_distance) {
-				best = closest;
-				best_distance = closest.distance;
+			if (best.hit) {
+				best_distance = best.distance;
+				// updated = true;
 			}
-			return closest;	// regardless of whether there is a hit, return the closest hit
+			return;	// regardless of whether there is a hit, return the closest hit
 
 		} else {
-			Vec2 hit_times_left = Vec2{std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity()};
-			Vec2 hit_times_right = Vec2{std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity()};
-			bool hit_left = nodes[node.l].bbox.hit(ray, hit_times_left);
-			bool hit_right = nodes[node.r].bbox.hit(ray, hit_times_right);
-			float hit_distance_left = hit_left ? hit_times_left.x * ray.dir.norm() : std::numeric_limits<float>::infinity();
-			float hit_distance_right = hit_right ? hit_times_right.x * ray.dir.norm() : std::numeric_limits<float>::infinity();
-			float cur_dist = std::min(hit_distance_left, hit_distance_right);
+			Vec2 hit_times_close = Vec2{0.0, ray_traverse_ub};
+			Vec2 hit_times_far = Vec2{0.0, ray_traverse_ub};
 
-			if (!hit_left && !hit_right) {
-				return best;
+			Node close_node = nodes[node.l];
+			Node far_node = nodes[node.r];
+			bool hit_close = close_node.bbox.hit(ray, hit_times_close);
+			bool hit_far = far_node.bbox.hit(ray, hit_times_far);
+
+			if (hit_close && hit_far) {
+				// if both nodes are hit, traverse the closest node first
+				traverse(ray, close_node);
+				if (best_distance < hit_times_far.x) {
+					return;
+				}
+				traverse(ray, far_node);
+				return;
+			} else if (hit_close) {
+				traverse(ray, close_node);
+			} else if (hit_far) {
+				traverse(ray, far_node);
 			}
-
-			float t1 = hit_times_left.x, t2 = hit_times_right.x;
-
-			if (t1 < t2) {
-				std::swap(t1, t2);
-				std::swap(hit_times_left, hit_times_right);
-			}
-
-			if (hit_left) {
-				traverse(ray, nodes[node.l]);
-			} else if (hit_right) {
-				traverse(ray, nodes[node.r]);
-			}
-
-			if (hit_right && hit_left && cur_dist < best_distance) {
-				traverse(ray, nodes[node.r]);
-			}
-			return best;
+			return;
 		}
 	};
 
