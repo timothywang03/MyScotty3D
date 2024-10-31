@@ -67,7 +67,7 @@ struct BBox {
 				float a = trans[j][i] * amin[j];
 				float b = trans[j][i] * amax[j];
 				if (a < b) {
-					min[i] += a;
+					min[i] += a
 					max[i] += b;
 				} else {
 					min[i] += b;

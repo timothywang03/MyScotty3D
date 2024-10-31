@@ -32,6 +32,7 @@ void BVH<Primitive>::build(std::vector<Primitive>&& prims, size_t max_leaf_size)
     primitives = std::move(prims);
 
 	unsigned long n = primitives.size();
+	unsigned long BUCKET_SIZE = 40;
 
     // Construct a BVH from the given vector of primitives and maximum leaf
     // size configuration.
@@ -39,14 +40,13 @@ void BVH<Primitive>::build(std::vector<Primitive>&& prims, size_t max_leaf_size)
     build_bvh = [&](std::vector<Primitive>& primitives, unsigned long start, unsigned long end) -> size_t {
         float best_cost = std::numeric_limits<float>::infinity();
         size_t best_axis = 0;
-        size_t best_partition = 0;
+        size_t best_partition = (start + end) / 2;
 
 		BBox root_box;
 		for (unsigned long i = start; i < end; i++) {
 			root_box.enclose(primitives[i].bbox());
 		}
 
-		// std::cout << "start: " << start << " end: " << end << std::endl;
         if (end - start <= max_leaf_size) {
             return BVH::new_node(root_box, start, end - start, 0, 0);
         }
@@ -58,16 +58,17 @@ void BVH<Primitive>::build(std::vector<Primitive>&& prims, size_t max_leaf_size)
                         return a.bbox().center()[axis] < b.bbox().center()[axis];
                         });
 
+			// std::cout << "partitioning" << std::endl;
             // create a bounding box for each primitive
-            for (unsigned long i = start; i < end; i++) {
+            for (unsigned long i = start + 1; i < end - 1; i += BUCKET_SIZE) {
                 BBox left, right;
+
                 for (unsigned long j = start; j < i; j++) {
                     left.enclose(primitives[j].bbox());
                 }
                 for (unsigned long j = i; j < end; j++) {
                     right.enclose(primitives[j].bbox());
                 }
-
                 float cost = left.surface_area() * (i - start) + right.surface_area() * (end - i);
                 if (cost < best_cost) {
                     best_cost = cost;
@@ -81,7 +82,6 @@ void BVH<Primitive>::build(std::vector<Primitive>&& prims, size_t max_leaf_size)
                     [best_axis](const Primitive& a, const Primitive& b) {
                     return a.bbox().center()[best_axis] < b.bbox().center()[best_axis];
                     });
-
         size_t left_node = build_bvh(primitives, start, best_partition);
         size_t right_node = build_bvh(primitives, best_partition, end);
 
