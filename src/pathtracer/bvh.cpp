@@ -43,6 +43,7 @@ void BVH<Primitive>::build(std::vector<Primitive>&& prims, size_t max_leaf_size)
         size_t best_partition = (start + end) / 2;
 
 		BBox root_box;
+
 		for (unsigned long i = start; i < end; i++) {
 			root_box.enclose(primitives[i].bbox());
 		}

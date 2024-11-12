@@ -2,6 +2,7 @@
 #include "scene/material.h"
 #include "scene/texture.h"
 #include "util/rand.h"
+#include <iostream>
 
 const Spectrum tm = Spectrum{0.25f, 0.5f, 0.75f};
 
