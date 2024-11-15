@@ -45,7 +45,7 @@ Spectrum Pathtracer::sample_direct_lighting_task4(RNG &rng, const Shading_Info& 
 	// Spectrum eval = hit.bsdf.evaluate(hit.out_dir, out_scatter.direction, hit.uv);
 
 	if (hit.bsdf.is_specular()) {
-		return radiance + emitted;
+		return radiance + (emitted * in.attenuation);
 	}
 
 	//TODO: weight properly depending on the probability of the sampled scattering direction and add to radiance
@@ -73,10 +73,9 @@ Spectrum Pathtracer::sample_direct_lighting_task6(RNG &rng, const Shading_Info& 
 	bool prob = log_rng.coin_flip(0.5f);
 	if (prob) {
 		Materials::Scatter in = hit.bsdf.scatter(rng, hit.out_dir, hit.uv);
-		Vec3 light_pos = hit.object_to_world.rotate(hit.pos);
 		Vec3 light_dir = hit.object_to_world.rotate(in.direction);
 		float bsdf_pdf = hit.bsdf.pdf(hit.out_dir, in.direction);
-		float light_pdf = area_lights_pdf(light_pos, light_dir);
+		float light_pdf = area_lights_pdf(hit.pos, light_dir);
 		Ray ray;
 		ray.dir = light_dir;
 		ray.depth = 0;
@@ -84,14 +83,13 @@ Spectrum Pathtracer::sample_direct_lighting_task6(RNG &rng, const Shading_Info& 
 		ray.dist_bounds = Vec2{EPS_F, std::numeric_limits<float>::infinity()};
 		auto [emitted, _] = trace(rng, ray);
 
-		radiance += (in.attenuation * emitted) / (bsdf_pdf + light_pdf);
+		radiance += (2 * in.attenuation * emitted) / (bsdf_pdf + light_pdf);
 	} else {
 		// Sample the area lights
-		Vec3 light_pos = hit.object_to_world.rotate(hit.pos);
-		Vec3 light_dir = sample_area_lights(rng, light_pos);
+		Vec3 light_dir = sample_area_lights(rng, hit.pos);
 		Vec3 local_dir = hit.world_to_object.rotate(light_dir);
 		float bsdf_pdf = hit.bsdf.pdf(hit.out_dir, local_dir);
-		float light_pdf = area_lights_pdf(light_pos, light_dir);
+		float light_pdf = area_lights_pdf(hit.pos, light_dir);
 		Ray ray;
 		ray.dir = light_dir;
 		ray.depth = 0;
@@ -99,7 +97,7 @@ Spectrum Pathtracer::sample_direct_lighting_task6(RNG &rng, const Shading_Info& 
 		ray.dist_bounds = Vec2{EPS_F, std::numeric_limits<float>::infinity()};
 		auto [emitted, _] = trace(rng, ray);
 
-		radiance += (hit.bsdf.evaluate(hit.out_dir, local_dir, hit.uv) * emitted) / (bsdf_pdf + light_pdf);
+		radiance += (2 * hit.bsdf.evaluate(hit.out_dir, local_dir, hit.uv) * emitted) / (bsdf_pdf + light_pdf);
 	}
 
 	return radiance;
@@ -129,7 +127,7 @@ Spectrum Pathtracer::sample_indirect_lighting(RNG &rng, const Shading_Info& hit)
 	auto [emitted, reflected] = trace(rng, ray);
 
 	if (hit.bsdf.is_specular()) {
-		return reflected;
+		return reflected * in.attenuation;
 	}
 
 	//TODO: weight properly depending on the probability of the sampled scattering direction and set radiance
