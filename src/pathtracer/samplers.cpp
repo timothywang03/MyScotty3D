@@ -1,6 +1,8 @@
 
+#include "../scene/shape.h"
 #include "samplers.h"
 #include "../util/rand.h"
+#include <iostream>
 
 constexpr bool IMPORTANCE_SAMPLING = true;
 
@@ -108,7 +110,7 @@ Vec3 Sphere::Uniform::sample(RNG &rng) const {
     // Generate a uniformly random point on the unit sphere.
     // Tip: start with Hemisphere::Uniform
 
-    return Vec3{};
+    return 2 * Hemisphere::Uniform{}.sample(rng) - Vec3(1.0f);
 }
 
 float Sphere::Uniform::pdf(Vec3 dir) const {
@@ -124,18 +126,53 @@ Sphere::Image::Image(const HDR_Image& image) {
     const auto [_w, _h] = image.dimension();
     w = _w;
     h = _h;
+
+	_pdf.resize(w * h);
+	_cdf.resize(w * h);
+	float total = 0.0f;
+
+	for (uint32_t v = 0; v < h; v++) {
+		float sintheta = std::sin(PI_F * (h - v) / float(h));
+		for (uint32_t u = 0; u < w; u++) {
+			_pdf[v * w + u] = image.data()[v * w + u].luma();
+			_pdf[v * w + u] *= sintheta;
+			total += _pdf[v * w + u];
+		}
+	}
+
+	// normalize the pdf 
+	for (uint32_t i = 0; i < w * h; i++) {
+		_pdf[i] /= total;
+	}
+
+	_cdf[0] = _pdf[0];
+	for (uint32_t v = 1; v < w * h; v++) {
+		_cdf[v] = _cdf[v - 1] + _pdf[v];
+	}
 }
 
 Vec3 Sphere::Image::sample(RNG &rng) const {
 	if(!IMPORTANCE_SAMPLING) {
 		// Step 1: Uniform sampling
 		// Declare a uniform sampler and return its sample
-    	return Vec3{};
+    	return sample(rng);
 	} else {
 		// Step 2: Importance sampling
 		// Use your importance sampling data structure to generate a sample direction.
 		// Tip: std::upper_bound
-    	return Vec3{};
+		uint32_t index = std::upper_bound(_cdf.begin(), _cdf.end(), rng.unit()) - _cdf.begin();
+
+		uint32_t u = index % w;
+		uint32_t v = h - (index / w);	
+
+		float theta = (v * PI_F) / h;
+		float phi = (2.0f * u * PI_F) / w;
+		float sintheta = std::sin(theta);
+		float costheta = std::cos(theta);
+		float sinphi = std::sin(phi);
+		float cosphi = std::cos(phi);
+
+		return Vec3(sintheta * cosphi, costheta, sintheta * sinphi);
 	}
 }
 
@@ -143,11 +180,22 @@ float Sphere::Image::pdf(Vec3 dir) const {
     if(!IMPORTANCE_SAMPLING) {
 		// Step 1: Uniform sampling
 		// Declare a uniform sampler and return its pdf
-    	return 0.f;
+    	return pdf(dir);
 	} else {
 		// A3T7 - image sampler importance sampling pdf
 		// What is the PDF of this distribution at a particular direction?
-    	return 0.f;
+		Vec2 uv = Shapes::Sphere::uv(dir);
+		float u = uv.x;
+		float v = uv.y;
+
+		uint32_t x = u * w;
+		uint32_t y = v * h;
+		float theta = ((h - y) * PI_F) / h;
+		float sintheta = std::sin(theta);
+
+		float pdf = _pdf[y * w + x] * (w * h);
+		pdf /= 2.0f * PI_F * PI_F * sintheta;
+		return pdf;
 	}
 }
 

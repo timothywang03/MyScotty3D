@@ -77,13 +77,16 @@ Spectrum Lambertian::evaluate(Vec3 out, Vec3 in, Vec2 uv) const {
 	float theta = dot(in, Vec3(0, 1, 0)) / in.norm();
 	if (theta <= 0) return Spectrum();
     return (albedo / PI_F) * in.y;
+
+	// float cos = std::max(0.0f, in.y);
+    // return (albedo.lock()->evaluate(uv) / PI_F) * cos;
 }
 
 Scatter Lambertian::scatter(RNG &rng, Vec3 out, Vec2 uv) const {
 	//A3T4: Materials - Lambertian BSDF scattering
 	//Select a scattered light direction at random from the Lambertian BSDF
 
-	[[maybe_unused]] Samplers::Hemisphere::Cosine sampler; //this will be useful
+	// [[maybe_unused]] Samplers::Hemisphere::Cosine sampler; //this will be useful
 
 	Scatter ret;
 	Samplers::Hemisphere::Cosine cosine_sampler;

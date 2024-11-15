@@ -66,27 +66,40 @@ Spectrum Pathtracer::sample_direct_lighting_task6(RNG &rng, const Shading_Info& 
 	// if constexpr (LOG_AREA_LIGHT_RAYS) {
 	// 	if (log_rng.coin_flip(0.5f)) log_ray(Ray(), 100.0f);
 	// }
-
 	if (hit.bsdf.is_specular()) {
-		return radiance;
-	} 
+		return sample_direct_lighting_task4(rng, hit);
+	}
 
 	bool prob = log_rng.coin_flip(0.5f);
 	if (prob) {
-		return sample_direct_lighting_task4(rng, hit);
-	} else {
-		// Sample the area lights
-		Vec3 light_dir = sample_area_lights(rng, hit.pos);
-		float pdf = area_lights_pdf(hit.pos, light_dir);
+		Materials::Scatter in = hit.bsdf.scatter(rng, hit.out_dir, hit.uv);
+		Vec3 light_pos = hit.object_to_world.rotate(hit.pos);
+		Vec3 light_dir = hit.object_to_world.rotate(in.direction);
+		float bsdf_pdf = hit.bsdf.pdf(hit.out_dir, in.direction);
+		float light_pdf = area_lights_pdf(light_pos, light_dir);
 		Ray ray;
 		ray.dir = light_dir;
 		ray.depth = 0;
 		ray.point = hit.pos;
 		ray.dist_bounds = Vec2{EPS_F, std::numeric_limits<float>::infinity()};
-
 		auto [emitted, _] = trace(rng, ray);
 
-		radiance += (hit.bsdf.evaluate(hit.out_dir, light_dir, hit.uv) * emitted) / (pdf + hit.bsdf.pdf(hit.out_dir, light_dir));
+		radiance += (in.attenuation * emitted) / (bsdf_pdf + light_pdf);
+	} else {
+		// Sample the area lights
+		Vec3 light_pos = hit.object_to_world.rotate(hit.pos);
+		Vec3 light_dir = sample_area_lights(rng, light_pos);
+		Vec3 local_dir = hit.world_to_object.rotate(light_dir);
+		float bsdf_pdf = hit.bsdf.pdf(hit.out_dir, local_dir);
+		float light_pdf = area_lights_pdf(light_pos, light_dir);
+		Ray ray;
+		ray.dir = light_dir;
+		ray.depth = 0;
+		ray.point = hit.pos;
+		ray.dist_bounds = Vec2{EPS_F, std::numeric_limits<float>::infinity()};
+		auto [emitted, _] = trace(rng, ray);
+
+		radiance += (hit.bsdf.evaluate(hit.out_dir, local_dir, hit.uv) * emitted) / (bsdf_pdf + light_pdf);
 	}
 
 	return radiance;

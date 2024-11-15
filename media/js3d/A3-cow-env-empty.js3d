@@ -3,8 +3,8 @@
 	"transforms":{
 		"Camera_transform":{
 			"parent":null,
-			"translation":[1.4271005392074585,1.4518213272094727,1.7156000137329102],
-			"rotation":[-0.13951557874679565,0.35596099495887756,0.05383671075105667,0.9224580526351929],
+			"translation":[1.427100539207458,1.451821327209473,1.71560001373291],
+			"rotation":[-0.1395155787467957,0.3559609949588776,0.05383671075105667,0.9224580526351929],
 			"scale":[1,1,1]
 		},
 		"Cow_transform":{
@@ -18,13 +18,19 @@
 			"translation":[0,0,0],
 			"rotation":[0,0,0,1],
 			"scale":[1,1,1]
+		},
+		"Transform":{
+			"parent":null,
+			"translation":[0,0,0],
+			"rotation":[0,0,0,1],
+			"scale":[1,1,1]
 		}
 	},
 	"cameras":{
 		"Camera":{
 			"vertical_fov":60,
-			"aspect_ratio":1.7777800559997559,
-			"near_plane":0.10000000149011612,
+			"aspect_ratio":1.777780055999756,
+			"near_plane":0.1000000014901161,
 			"aperture_shape":1,
 			"aperture_size":0,
 			"focal_dist":1,
@@ -46,7 +52,7 @@
 		"Texture":{
 			"type":"Image",
 			"sampler":"nearest",
-			"image":"hdr64:cmF3ZgAAAAAAAAAA"
+			"image":"../../../../../Downloads/asst3_exr_archive/grace.exr"
 		},
 		"white":{
 			"type":"Constant",
@@ -67,6 +73,11 @@
 	"delta_lights":{},
 	"env_lights":{
 		"Env Light":{
+			"type":"Sphere",
+			"intensity":1,
+			"radiance":"Texture"
+		},
+		"Env Light 1":{
 			"type":"Sphere",
 			"intensity":1,
 			"radiance":"Texture"
@@ -99,6 +110,11 @@
 			"Env Light Instance":{
 				"transform":"Env_light_transform",
 				"light":"Env Light",
+				"visible":true
+			},
+			"Env Light Instance 1":{
+				"transform":"Transform",
+				"light":"Env Light 1",
 				"visible":true
 			}
 		}
