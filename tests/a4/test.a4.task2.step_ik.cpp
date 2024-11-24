@@ -1,6 +1,7 @@
 #include "test.h"
 #include "scene/skeleton.h"
 #include <queue>
+#include <iostream>	
 
 static bool in_range(Vec3 testee, Vec3 lower, Vec3 upper) {
 	return testee.x >= lower.x && testee.x <= upper.x && testee.y >= lower.y && testee.y <= upper.y &&
@@ -23,6 +24,7 @@ Test test_a4_task2_step_ik_single_joint_single_target("a4.task2.step_ik.single_j
 		queue.push(simple.bones[joint].pose);
 	}
 
+	std::cout << queue.size() << std::endl;
 	if (Test::differs(queue.front(), queue.back())) {
 		throw Test::error("IK did not converge within the desired number of iterations!");
 	}

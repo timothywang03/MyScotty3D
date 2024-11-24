@@ -48,13 +48,6 @@ PT::Trace Sphere::hit(Ray ray) const {
 		float t1 = (-2 * dot(origin, dir) - sqrt(discriminant)) / (2 * pow(dir.norm(), 2));
 		float t2 = (-2 * dot(origin, dir) + sqrt(discriminant)) / (2 * pow(dir.norm(), 2));
 
-		float dist1 = (t1 * dir).norm();
-		float dist2 = (t2 * dir).norm();
-
-		if (dist1 > dist2) {
-			std::swap(t1, t2);
-		}
-
 		if (t1 >= ray.dist_bounds[0] && t1 <= ray.dist_bounds[1]) {
 			ret.hit = true;
 			ret.position = origin + t1 * dir;
