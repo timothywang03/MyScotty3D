@@ -115,6 +115,15 @@ static void expect_bvh(std::vector<Vec3>& verts, size_t max_leaf_size, float exp
 	check_invariants(bvh, bvh.nodes.at(bvh.root_idx), max_leaf_size);
 }
 
+Test test_a3_task3_bvh_build_no_gap("a3.task3.bvh.build.no_gap", []() {
+	auto verts = std::vector{
+								Vec3{1, 0, 0}, Vec3{0, 1, 0}, Vec3{0, 0, 1}, 
+								Vec3{0, 0, 0}, Vec3{1, 1, 0}, Vec3{0, 1, 1}
+							};
+
+	expect_bvh(verts, 1, 2);
+});
+
 Test test_a3_task3_bvh_build_simple("a3.task3.bvh.build.simple", []() {
 	auto verts = std::vector{
 								Vec3{0, 0, 0}, Vec3{1, 0, 0}, Vec3{0, 1, 0}, 

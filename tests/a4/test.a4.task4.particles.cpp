@@ -4,6 +4,7 @@
 #include "pathtracer/aggregate.h"
 #include "scene/particles.h"
 #include "util/rand.h"
+#include <iostream>
 
 Test test_a4_task4_particles_free_fall("a4.task4.particles.free_fall", []() {
 	PT::Aggregate empty;
@@ -39,7 +40,9 @@ Test test_a4_task4_particles_ground_only("a4.task4.particles.ground_only", []() 
 	Vec3 expected_pos = Vec3(0.000000f, 0.762118f, 0.000000f);
 	Vec3 expected_velocity = Vec3(0.000000f, -2.058001f, 0.000000f);
 	Vec3 actual_pos = particles.particles[0].position;
+	std::cout << "actual_pos: " << actual_pos << std::endl;
 	Vec3 actual_velocity = particles.particles[0].velocity;
+	std::cout << "actual_velocity: " << actual_velocity << std::endl;
 	if (Test::differs(expected_pos, actual_pos)) {
 		throw Test::error("Particle position differs from expected value!");
 	} else if (Test::differs(expected_velocity, actual_velocity)) {

@@ -1,5 +1,6 @@
 
 #include "particles.h"
+#include <iostream>
 
 bool Particles::Particle::update(const PT::Aggregate &scene, Vec3 const &gravity, const float radius, const float dt) {
 
@@ -7,18 +8,41 @@ bool Particles::Particle::update(const PT::Aggregate &scene, Vec3 const &gravity
 
 	// Compute the trajectory of this particle for the next dt seconds.
 
-	// (1) Build a ray representing the particle's path as if it travelled at constant velocity.
+	float time_left = dt;
+	float time_traveled = 0.0f;
+	int k = 0;
+	while (time_left > EPS_F && k < 5) {
+		// (1) Build a ray representing the particle's path as if it travelled at constant velocity.
+		Ray trajectory = Ray();
+		trajectory.point = position;
+		trajectory.dir = velocity;
 
-	// (2) Intersect the ray with the scene and account for collisions. Be careful when placing
-	// collision points using the particle radius. Move the particle to its next position.
+		// (2) Intersect the ray with the scene and account for collisions. Be careful when placing
+		// collision points using the particle radius. Move the particle to its next position.
+		PT::Trace hit_value = scene.hit(trajectory);
+		float cos = std::abs(dot(velocity.unit(), hit_value.normal));
+		float closest = hit_value.distance - (radius / cos);
 
-	// (3) Account for acceleration due to gravity after updating position.
-
+		if (hit_value.hit && closest <= time_left * velocity.norm()) {
+			position += std::max(closest / velocity.norm(), 0.0f) * velocity;
+			velocity = velocity - 2.0f * dot(velocity, hit_value.normal) * hit_value.normal;
+			time_left -= closest / velocity.norm();
+			time_traveled = closest / velocity.norm();
+		} else {
+			position += velocity * time_left;
+			velocity += gravity * time_left;
+			time_left = 0.0f;
+			age -= dt;
+			return age > 0.0f;
+		}
+		velocity += gravity * time_traveled;
+		k++;	
+	}
 	// (4) Repeat until the entire time step has been consumed.
 
 	// (5) Decrease the particle's age and return 'false' if it should be removed.
-
-	return false;
+	age -= dt;
+	return age > 0.0f;
 }
 
 void Particles::advance(const PT::Aggregate& scene, const Mat4& to_world, float dt) {

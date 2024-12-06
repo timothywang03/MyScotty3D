@@ -65,7 +65,7 @@ Trace Triangle::hit(const Ray& ray) const {
 		return Trace();
 	}
 
-	Vec3 cram = (1 / (dot(cross(e1, d), e2))) * Vec3{-dot(cross(s, e2), d), dot(cross(e1, d), s), -dot(cross(s, e2), e1)};
+	Vec3 cram = (1.0f / (dot(cross(e1, d), e2))) * Vec3{-dot(cross(s, e2), d), dot(cross(e1, d), s), -dot(cross(s, e2), e1)};
 
 	float u = cram[0];
 	float v = cram[1];

@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/Scotty3D",
-            "args": [],
+            "args": [ "--scene",  "media/js3d/A4-particles.js3d" ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/media",
             "environment": [],
