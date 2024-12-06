@@ -15,7 +15,7 @@ bool Particles::Particle::update(const PT::Aggregate &scene, Vec3 const &gravity
 		// (1) Build a ray representing the particle's path as if it travelled at constant velocity.
 		Ray trajectory = Ray();
 		trajectory.point = position;
-		trajectory.dir = velocity;
+		trajectory.dir = velocity.unit();
 
 		// (2) Intersect the ray with the scene and account for collisions. Be careful when placing
 		// collision points using the particle radius. Move the particle to its next position.
